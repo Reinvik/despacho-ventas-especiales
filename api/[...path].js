@@ -196,9 +196,22 @@ export default async function handler(req, res) {
 
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
+  // Normalizar ruta quitando /api si viene incluido
+  const route = pathname.startsWith('/api') ? pathname.slice(4) : pathname;
 
-  // 1. GET /api/status
-  if (pathname === '/api/status' && req.method === 'GET') {
+  // Parsear body si viene como string
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      body = {};
+    }
+  }
+  if (!body) body = {};
+
+  // 1. GET /status o /api/status
+  if ((route === '/status' || route === '') && req.method === 'GET') {
     return res.status(200).json({
       status: "online",
       mode: "cloud-vercel",
@@ -211,23 +224,22 @@ export default async function handler(req, res) {
     });
   }
 
-  // 2. GET /api/transports
-  if (pathname === '/api/transports' && req.method === 'GET') {
+  // 2. GET /transports o /api/transports
+  if (route === '/transports' && req.method === 'GET') {
     return res.status(200).json(Object.values(memoryTransports));
   }
 
-  // 3. POST /api/transports/seed-sample
-  if (pathname === '/api/transports/seed-sample' && req.method === 'POST') {
+  // 3. POST /transports/seed-sample
+  if (route === '/transports/seed-sample' && req.method === 'POST') {
     initMemoryWithSample();
     return res.status(200).json(memoryTransports["3417089"]);
   }
 
-  // 4. POST /api/transports/parse-raw
-  if (pathname === '/api/transports/parse-raw' && req.method === 'POST') {
+  // 4. POST /transports/parse-raw
+  if ((route === '/transports/parse-raw' || route.includes('parse-raw')) && req.method === 'POST') {
     try {
-      const body = req.body || {};
       const summary = parseVl06oNode(
-        body.raw_text,
+        body.raw_text || "",
         body.documento_transporte || "3417089",
         body.cliente_override,
         body.semana_override,
@@ -240,22 +252,21 @@ export default async function handler(req, res) {
     }
   }
 
-  // 5. POST /api/sap/extract
-  if (pathname === '/api/sap/extract' && req.method === 'POST') {
-    // Explicación guiada amigable en español
+  // 5. POST /sap/extract
+  if ((route === '/sap/extract' || route.includes('sap/extract')) && req.method === 'POST') {
     return res.status(400).json({
       detail: "La automatización directa con SAP GUI (GetObject('SAPGUI')) requiere ejecutarse en tu equipo Windows local donde está instalado SAP Logon. Abre la app localmente con 'iniciar_app.bat' en tu PC, o copia el reporte en SAP y usa la opción 'Pegar Datos'."
     });
   }
 
-  // 6. PATCH /api/transports/:id/items
-  const itemsMatch = pathname.match(/\/api\/transports\/([^/]+)\/items$/);
+  // 6. PATCH /transports/:id/items
+  const itemsMatch = route.match(/\/transports\/([^/]+)\/items$/);
   if (itemsMatch && req.method === 'PATCH') {
     const id = itemsMatch[1];
     const trans = memoryTransports[id];
     if (!trans) return res.status(404).json({ detail: "Transporte no encontrado" });
 
-    const { sku, cantidad_preparada, posicion } = req.body || {};
+    const { sku, cantidad_preparada, posicion } = body;
     const item = trans.items.find(i => i.sku === sku && (posicion === undefined || i.posicion === posicion));
     if (item) {
       item.cantidad_preparada = Math.max(0, cantidad_preparada);
@@ -268,17 +279,17 @@ export default async function handler(req, res) {
     return res.status(200).json(trans);
   }
 
-  // 7. PATCH /api/transports/:id
-  const idMatch = pathname.match(/\/api\/transports\/([^/]+)$/);
+  // 7. PATCH /transports/:id
+  const idMatch = route.match(/\/transports\/([^/]+)$/);
   if (idMatch && req.method === 'PATCH') {
     const id = idMatch[1];
     const trans = memoryTransports[id];
     if (!trans) return res.status(404).json({ detail: "Transporte no encontrado" });
-    Object.assign(trans, req.body || {});
+    Object.assign(trans, body);
     return res.status(200).json(trans);
   }
 
-  // 8. GET /api/transports/:id
+  // 8. GET /transports/:id
   if (idMatch && req.method === 'GET') {
     const id = idMatch[1];
     const trans = memoryTransports[id];
@@ -286,15 +297,15 @@ export default async function handler(req, res) {
     return res.status(200).json(trans);
   }
 
-  // 9. DELETE /api/transports/:id
+  // 9. DELETE /transports/:id
   if (idMatch && req.method === 'DELETE') {
     const id = idMatch[1];
     delete memoryTransports[id];
     return res.status(200).json({ success: true, message: `Transporte ${id} eliminado` });
   }
 
-  // 10. GET /api/sap/macro-code
-  if (pathname === '/api/sap/macro-code' && req.method === 'GET') {
+  // 10. GET /sap/macro-code
+  if ((route === '/sap/macro-code' || route.includes('macro-code')) && req.method === 'GET') {
     const tknum = url.searchParams.get('tknum') || "3417089";
     return res.status(200).json({
       tknum,
