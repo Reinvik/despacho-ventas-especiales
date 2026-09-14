@@ -4,50 +4,101 @@ import { parseVl06oClient } from './clientParser';
 import { getClientSampleSummary } from './sampleData';
 import { exportTransportToExcelClient } from './excelClient';
 
-const API_BASE = '/api';
+const LOCAL_BASE = 'http://127.0.0.1:3115/api';
+const CLOUD_BASE = '/api';
 
-async function checkIsBackendAvailable(): Promise<boolean> {
+// Verificar si el agente local de Windows está activo
+async function checkLocalAgent(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/status`, { signal: AbortSignal.timeout(1500) });
+    const res = await fetch(`${LOCAL_BASE}/status`, { signal: AbortSignal.timeout(800) });
     return res.ok;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
 
 export const api = {
   async getStatus(): Promise<SapStatusResponse> {
-    try {
-      const res = await fetch(`${API_BASE}/status`, { signal: AbortSignal.timeout(1500) });
-      if (res.ok) return await res.json();
-    } catch (e) {}
+    // 1. Intentar agente local de Windows
+    const hasLocal = await checkLocalAgent();
+    if (hasLocal) {
+      try {
+        const res = await fetch(`${LOCAL_BASE}/status`, { signal: AbortSignal.timeout(1000) });
+        if (res.ok) {
+          const data = await res.json();
+          return {
+            ...data,
+            is_local_bridge: true,
+            sap_gui: {
+              ...data.sap_gui,
+              message: data.sap_gui.running 
+                ? "SAP GUI Conectado en Windows (Sesión Activa)"
+                : "Agente Windows Activo • Abre SAP Logon para extracción automática"
+            }
+          };
+        }
+      } catch {}
+    }
 
-    // Fallback cuando se ejecuta en la nube (Vercel)
+    // 2. Intentar Vercel Serverless
+    try {
+      const res = await fetch(`${CLOUD_BASE}/status`, { signal: AbortSignal.timeout(1500) });
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          ...data,
+          is_local_bridge: false
+        };
+      }
+    } catch {}
+
+    // 3. Fallback Nube
     return {
       status: "cloud",
       timestamp: new Date().toISOString(),
+      is_local_bridge: false,
       sap_gui: {
         running: false,
         processes: [],
-        message: "Modo Nube (Vercel): Para extracción SAP directa COM, ejecuta la app localmente con iniciar_app.bat o pega los datos directamente."
+        message: "Modo Nube: Para automatizar SAP GUI directamente con 1-clic, ejecuta 'iniciar_app.bat' en tu PC, o usa el botón 'Pegar Datos'."
       }
     };
   },
 
   async listTransports(): Promise<TransportSummary[]> {
+    // Intentar agente local primero si está activo
+    const hasLocal = await checkLocalAgent();
+    if (hasLocal) {
+      try {
+        const res = await fetch(`${LOCAL_BASE}/transports`, { signal: AbortSignal.timeout(1000) });
+        if (res.ok) return await res.json();
+      } catch {}
+    }
+
+    // Intentar Vercel
     try {
-      const res = await fetch(`${API_BASE}/transports`, { signal: AbortSignal.timeout(1500) });
+      const res = await fetch(`${CLOUD_BASE}/transports`, { signal: AbortSignal.timeout(1500) });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
+
     // Fallback localStorage
     return localDb.list();
   },
 
   async getTransport(id: string): Promise<TransportSummary> {
+    const hasLocal = await checkLocalAgent();
+    if (hasLocal) {
+      try {
+        const res = await fetch(`${LOCAL_BASE}/transports/${id}`, { signal: AbortSignal.timeout(1000) });
+        if (res.ok) return await res.json();
+      } catch {}
+    }
+
     try {
-      const res = await fetch(`${API_BASE}/transports/${id}`, { signal: AbortSignal.timeout(1500) });
+      const res = await fetch(`${CLOUD_BASE}/transports/${id}`, { signal: AbortSignal.timeout(1500) });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
+
     const found = localDb.get(id);
     if (!found) throw new Error(`Transporte ${id} no encontrado`);
     return found;
@@ -60,15 +111,18 @@ export const api = {
     semana_override?: string;
     cantidad_pallet?: number;
   }): Promise<TransportSummary> {
+    const hasLocal = await checkLocalAgent();
+    const endpoint = hasLocal ? `${LOCAL_BASE}/transports/parse-raw` : `${CLOUD_BASE}/transports/parse-raw`;
+
     try {
-      const res = await fetch(`${API_BASE}/transports/parse-raw`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
         signal: AbortSignal.timeout(3000)
       });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
 
     // Fallback parser cliente
     const summary = parseVl06oClient(
@@ -87,31 +141,56 @@ export const api = {
     semana?: string;
     cantidad_pallet?: number;
   }): Promise<{ success: boolean; message: string; data: TransportSummary }> {
-    const res = await fetch(`${API_BASE}/sap/extract`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Error al conectar y extraer desde SAP GUI');
+    // 1. Si el agente local en Windows está corriendo, conectar directamente
+    const hasLocal = await checkLocalAgent();
+    if (hasLocal) {
+      const res = await fetch(`${LOCAL_BASE}/sap/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.detail || json.error || 'Error al conectar con SAP GUI en Windows');
+      }
+      return json;
     }
-    return res.json();
+
+    // 2. Si estamos en la nube sin agente local:
+    try {
+      const res = await fetch(`${CLOUD_BASE}/sap/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.detail || 'SAP GUI no está disponible en este modo');
+      }
+      return json;
+    } catch (e: any) {
+      throw new Error(
+        e.message || "SAP GUI requiere sesión activa en Windows. Ejecuta 'iniciar_app.bat' en tu PC para conectar automáticamente, o usa 'Pegar Datos'."
+      );
+    }
   },
 
   async updateTransportSummary(
     id: string,
     updates: Partial<TransportSummary>
   ): Promise<TransportSummary> {
+    const hasLocal = await checkLocalAgent();
+    const endpoint = hasLocal ? `${LOCAL_BASE}/transports/${id}` : `${CLOUD_BASE}/transports/${id}`;
+
     try {
-      const res = await fetch(`${API_BASE}/transports/${id}`, {
+      const res = await fetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
         signal: AbortSignal.timeout(1500)
       });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
 
     return localDb.updateSummary(id, updates);
   },
@@ -122,43 +201,55 @@ export const api = {
     cantidad_preparada: number,
     posicion?: string
   ): Promise<TransportSummary> {
+    const hasLocal = await checkLocalAgent();
+    const endpoint = hasLocal ? `${LOCAL_BASE}/transports/${transportId}/items` : `${CLOUD_BASE}/transports/${transportId}/items`;
+
     try {
-      const res = await fetch(`${API_BASE}/transports/${transportId}/items`, {
+      const res = await fetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sku, cantidad_preparada, posicion }),
         signal: AbortSignal.timeout(1500)
       });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
 
     return localDb.updateItemQuantity(transportId, sku, cantidad_preparada, posicion);
   },
 
   async prepareAll(transportId: string, prepareAll: boolean): Promise<TransportSummary> {
+    const hasLocal = await checkLocalAgent();
+    const endpoint = hasLocal ? `${LOCAL_BASE}/transports/${transportId}/prepare-all` : `${CLOUD_BASE}/transports/${transportId}/prepare-all`;
+
     try {
-      const res = await fetch(`${API_BASE}/transports/${transportId}/prepare-all?prepare_all=${prepareAll}`, {
+      const res = await fetch(`${endpoint}?prepare_all=${prepareAll}`, {
         method: 'POST',
         signal: AbortSignal.timeout(1500)
       });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
 
     return localDb.prepareAll(transportId, prepareAll);
   },
 
   async deleteTransport(id: string): Promise<void> {
+    const hasLocal = await checkLocalAgent();
+    const endpoint = hasLocal ? `${LOCAL_BASE}/transports/${id}` : `${CLOUD_BASE}/transports/${id}`;
+
     try {
-      await fetch(`${API_BASE}/transports/${id}`, { method: 'DELETE', signal: AbortSignal.timeout(1500) });
-    } catch (e) {}
+      await fetch(endpoint, { method: 'DELETE', signal: AbortSignal.timeout(1500) });
+    } catch {}
     localDb.delete(id);
   },
 
   async seedSample(): Promise<TransportSummary> {
+    const hasLocal = await checkLocalAgent();
+    const endpoint = hasLocal ? `${LOCAL_BASE}/transports/seed-sample` : `${CLOUD_BASE}/transports/seed-sample`;
+
     try {
-      const res = await fetch(`${API_BASE}/transports/seed-sample`, { method: 'POST', signal: AbortSignal.timeout(1500) });
+      const res = await fetch(endpoint, { method: 'POST', signal: AbortSignal.timeout(1500) });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
 
     const sample = getClientSampleSummary();
     localDb.save(sample);
@@ -175,20 +266,23 @@ export const api = {
 
   async getMacroCode(tknum: string): Promise<{ tknum: string; vba_macro: string; vbs_script: string }> {
     try {
-      const res = await fetch(`${API_BASE}/sap/macro-code?tknum=${tknum}`, { signal: AbortSignal.timeout(1500) });
+      const res = await fetch(`${CLOUD_BASE}/sap/macro-code?tknum=${tknum}`, { signal: AbortSignal.timeout(1500) });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch {}
 
-    const vba_macro = `Attribute VB_Name = "Modulo_SAP_VL06O"
-' Macro para extraer Transporte ${tknum} desde SAP GUI
+    const vba_macro = `' Macro SAP VL06O para Transporte ${tknum}
 Sub Extraer_Despacho_SAP()
     Dim SapGuiAuto As Object, application As Object, connection As Object, session As Object
     If Not IsObject(application) Then
        Set SapGuiAuto = GetObject("SAPGUI")
        Set application = SapGuiAuto.GetScriptingEngine
     End If
-    Set connection = application.Children(0)
-    Set session = connection.Children(0)
+    If Not IsObject(connection) Then
+       Set connection = application.Children(0)
+    End If
+    If Not IsObject(session) Then
+       Set session = connection.Children(0)
+    End If
     session.findById("wnd[0]").maximize
     session.findById("wnd[0]/tbar[0]/okcd").Text = "/nvl06o"
     session.findById("wnd[0]").sendVKey 0

@@ -76,24 +76,34 @@ export const SapModal: React.FC<SapModalProps> = ({
 
         {/* Status Alert */}
         <div className="px-6 pt-4">
-          <div className={`p-3 rounded-xl border flex items-start space-x-2.5 text-xs ${
+          <div className={`p-3.5 rounded-xl border flex items-start space-x-2.5 text-xs ${
             isSapRunning 
               ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300' 
-              : 'bg-amber-950/40 border-amber-800/60 text-amber-300'
+              : sapStatus?.is_local_bridge
+              ? 'bg-amber-950/40 border-amber-800/60 text-amber-300'
+              : 'bg-blue-950/40 border-blue-800/60 text-cyan-300'
           }`}>
             {isSapRunning ? (
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            ) : (
+            ) : sapStatus?.is_local_bridge ? (
               <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            ) : (
+              <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
             )}
             <div>
               <p className="font-semibold">
-                {isSapRunning ? 'SAP GUI detectado en ejecución' : 'SAP GUI no está abierto actualmente'}
+                {isSapRunning 
+                  ? 'SAP GUI detectado en tu equipo (Sesión Activa)' 
+                  : sapStatus?.is_local_bridge
+                  ? 'Agente Local Activo • Falta abrir SAP Logon'
+                  : 'Modo Web (dve.nexusnetwork.cl)'}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
                 {isSapRunning
-                  ? 'Listo para conectar a la sesión activa mediante GetObject("SAPGUI") y ejecutar VL06O.'
-                  : 'Abre SAP Logon e inicia sesión en tu mandante antes de presionar extraer, o usa la opción "Pegar Datos".'}
+                  ? 'Listo para conectar a la sesión activa mediante GetObject("SAPGUI") y ejecutar VL06O automáticamente.'
+                  : sapStatus?.is_local_bridge
+                  ? 'Abre SAP Logon e inicia sesión en tu mandante para que la app se conecte automáticamente.'
+                  : 'Para conectar a SAP GUI por Scripting COM en Windows, inicia la app con iniciar_app.bat en tu PC, o usa el botón "Pegar Datos" para ingresar el reporte copiado de SAP.'}
               </p>
             </div>
           </div>

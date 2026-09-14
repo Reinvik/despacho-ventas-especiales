@@ -44,4 +44,5 @@ export interface SapStatusResponse {
     processes: Array<{ pid: number; name: string }>;
     message: string;
   };
+  is_local_bridge?: boolean;
 }

@@ -24,7 +24,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS para comunicación con el frontend de Vite
+# CORS para comunicación con el frontend de Vite y producción en Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,6 +32,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_private_network_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
 
 @app.get("/api/status")
 def get_system_status():
