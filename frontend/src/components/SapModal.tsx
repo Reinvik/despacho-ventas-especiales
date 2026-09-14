@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, X, AlertCircle, CheckCircle2, Loader2, Info } from 'lucide-react';
+import { Zap, X, AlertCircle, CheckCircle2, Loader2, Info, Download } from 'lucide-react';
 import { SapStatusResponse } from '../types';
 
 interface SapModalProps {
@@ -75,7 +75,7 @@ export const SapModal: React.FC<SapModalProps> = ({
         </div>
 
         {/* Status Alert */}
-        <div className="px-6 pt-4">
+        <div className="px-6 pt-4 space-y-3">
           <div className={`p-3.5 rounded-xl border flex items-start space-x-2.5 text-xs ${
             isSapRunning 
               ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300' 
@@ -103,8 +103,33 @@ export const SapModal: React.FC<SapModalProps> = ({
                   ? 'Listo para conectar a la sesión activa mediante GetObject("SAPGUI") y ejecutar VL06O automáticamente.'
                   : sapStatus?.is_local_bridge
                   ? 'Abre SAP Logon e inicia sesión en tu mandante para que la app se conecte automáticamente.'
-                  : 'Para conectar a SAP GUI por Scripting COM en Windows, inicia la app con iniciar_app.bat en tu PC, o usa el botón "Pegar Datos" para ingresar el reporte copiado de SAP.'}
+                  : 'Para conectar con SAP GUI sin Python, descarga el Script SAP (.vbs) o usa "Pegar Datos".'}
               </p>
+            </div>
+          </div>
+
+          {/* Descargas directas de scripts */}
+          <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex flex-wrap gap-2 items-center justify-between text-xs">
+            <span className="text-slate-400 font-medium">📥 Descargar utilidades Windows:</span>
+            <div className="flex gap-2">
+              <a
+                href="/Extraer_SAP_y_Enviar_a_la_Web.vbs"
+                download="Extraer_SAP_y_Enviar_a_la_Web.vbs"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-800 text-cyan-300 text-[11px] font-semibold transition-all"
+                title="Descargar script Windows de 1 clic (No requiere Python)"
+              >
+                <Download className="w-3 h-3" />
+                <span>Script SAP (.vbs)</span>
+              </a>
+              <a
+                href="/iniciar_app.bat"
+                download="iniciar_app.bat"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[11px] font-semibold transition-all"
+                title="Descargar lanzador local para Windows"
+              >
+                <Download className="w-3 h-3" />
+                <span>iniciar_app.bat</span>
+              </a>
             </div>
           </div>
         </div>
