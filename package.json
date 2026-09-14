@@ -1,0 +1,10 @@
+{
+  "name": "despacho-ventas-especiales",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Despacho Ventas Especiales — Conexión SAP VL06O, control de pallets, fases y detalle SKU",
+  "scripts": {
+    "build": "npm run build --prefix frontend",
+    "dev": "npm run dev --prefix frontend"
+  }
+}
