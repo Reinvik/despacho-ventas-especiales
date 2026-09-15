@@ -160,7 +160,7 @@ def export_excel_single(transport_id: str):
         raise HTTPException(status_code=404, detail=f"Transporte {transport_id} no encontrado")
 
     excel_buffer = excel_service.create_excel_report(trans)
-    filename = f"Despacho_{trans.semana.replace(' ', '_')}_{trans.numero_transporte}_{trans.cliente[:15].strip()}.xlsx"
+    filename = f"{datetime.now().strftime('%Y%m%d %H%M')}.xlsx"
     
     return StreamingResponse(
         excel_buffer,
@@ -176,7 +176,7 @@ def export_excel_all():
         raise HTTPException(status_code=400, detail="No hay transportes cargados para exportar.")
 
     excel_buffer = excel_service.create_excel_report(trans_list)
-    filename = f"Despacho_Ventas_Especiales_Consolidado_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    filename = f"{datetime.now().strftime('%Y%m%d %H%M')}.xlsx"
     
     return StreamingResponse(
         excel_buffer,

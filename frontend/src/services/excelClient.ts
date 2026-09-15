@@ -46,9 +46,15 @@ export const exportTransportToExcelClient = (summaryList: TransportSummary | Tra
   const wsDetalle = XLSX.utils.json_to_sheet(detalleRows);
   XLSX.utils.book_append_sheet(wb, wsDetalle, "Detalle Preparación");
 
-  const filename = summaries.length === 1 
-    ? `Despacho_${summaries[0].semana.replace(/\s+/g, '_')}_${summaries[0].numero_transporte}.xlsx`
-    : `Despacho_Ventas_Especiales_Consolidado.xlsx`;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const timestamp = `${year}${month}${day} ${hours}${minutes}`;
+
+  const filename = `${timestamp}.xlsx`;
 
   XLSX.writeFile(wb, filename);
 };
