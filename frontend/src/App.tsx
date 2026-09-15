@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { CialBrandBar } from './components/CialBrandBar';
 import { KpiCards } from './components/KpiCards';
 import { SummaryTable } from './components/SummaryTable';
 import { DetailSkuTable } from './components/DetailSkuTable';
@@ -155,9 +156,9 @@ export const App: React.FC = () => {
   const selectedTransport = transports.find(t => t.id === selectedId);
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f1f5f9] text-slate-800 flex flex-col font-sans antialiased">
       
-      {/* Navbar Superior */}
+      {/* Header Corporativo Oficial CIAL Alimentos */}
       <Navbar
         sapStatus={sapStatus}
         onOpenSapModal={() => setIsSapModalOpen(true)}
@@ -168,24 +169,27 @@ export const App: React.FC = () => {
         isLoading={loading}
       />
 
+      {/* Subbarra de Marca y Estado SAP CIAL */}
+      <CialBrandBar sapStatus={sapStatus} />
+
       {/* Notificación flotante */}
       {notification && (
         <div className={`fixed bottom-6 right-6 z-50 flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold animate-in slide-in-from-bottom-5 duration-300 ${
           notification.type === 'success'
-            ? 'bg-emerald-950 border-emerald-700 text-emerald-200'
-            : 'bg-rose-950 border-rose-700 text-rose-200'
+            ? 'bg-emerald-900 border-emerald-700 text-emerald-100 shadow-emerald-950/30'
+            : 'bg-rose-900 border-rose-700 text-rose-100 shadow-rose-950/30'
         }`}>
           {notification.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-rose-300 shrink-0" />
           )}
           <span>{notification.message}</span>
         </div>
       )}
 
       {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* KPI Cards */}
         <KpiCards transports={transports} />
@@ -209,20 +213,22 @@ export const App: React.FC = () => {
             onExportExcel={() => handleExportSingleExcel(selectedTransport.id)}
           />
         ) : (
-          <div className="bg-[#111827] border border-dashed border-slate-800 rounded-2xl p-10 text-center text-slate-500">
-            <Truck className="w-12 h-12 mx-auto text-slate-700 mb-3" />
-            <p className="text-sm font-medium text-slate-400">Ningún transporte seleccionado</p>
-            <p className="text-xs text-slate-500 mt-1">
-              Haz clic en una fila del resumen o utiliza "Conectar SAP" / "Cargar Ejemplo" para comenzar.
+          <div className="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-500 shadow-sm">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-3 text-[#0a5c36]">
+              <Truck className="w-7 h-7" />
+            </div>
+            <p className="text-base font-bold text-slate-800">Ningún transporte seleccionado</p>
+            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+              Haz clic en una fila del resumen superior o utiliza <span className="font-bold text-amber-600">"Conectar SAP"</span> / <span className="font-bold text-[#0a5c36]">"Ejemplo"</span> para visualizar y editar la preparación por SKU.
             </p>
           </div>
         )}
 
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-[#0A0E17] py-4 text-center text-xs text-slate-500">
-        <p>Despacho Ventas Especiales • Integración SAP GUI Scripting & Excel • Smartlean Platform</p>
+      {/* Footer CIAL Alimentos */}
+      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500 font-medium">
+        <p>CIAL Alimentos • San Jorge • La Preferida • Winter — Control Outbound & Despacho Ventas Especiales</p>
       </footer>
 
       {/* Modales */}

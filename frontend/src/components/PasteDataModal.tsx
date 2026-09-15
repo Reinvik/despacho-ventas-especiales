@@ -65,27 +65,27 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
         
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+        {/* Header CIAL */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#08482a] bg-[#0a5c36] text-white">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-950 border border-blue-800 flex items-center justify-center text-cyan-400">
-              <ClipboardPaste className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-300">
+              <ClipboardPaste className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">
                 Ingresar Datos de SAP VL06O
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-emerald-200 font-medium">
                 Pega directamente la tabla exportada o selecciona un archivo .txt / .tsv
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -94,14 +94,14 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Documento Transporte (TKNUM)
               </label>
               <input
@@ -109,12 +109,12 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
                 placeholder="3417089"
                 value={tknum}
                 onChange={(e) => setTknum(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono text-xs focus:border-cyan-400 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-bold"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Semana
               </label>
               <input
@@ -122,12 +122,12 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
                 placeholder="Semana 36"
                 value={semana}
                 onChange={(e) => setSemana(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-xs focus:border-cyan-400 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Cantidad Pallets
               </label>
               <input
@@ -135,17 +135,17 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
                 min="0"
                 value={pallets}
                 onChange={(e) => setPallets(parseInt(e.target.value) || 0)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-xs focus:border-cyan-400 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-bold"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-300">
+              <label className="block text-xs font-bold text-slate-700">
                 Pega la tabla copiada de SAP (Entrega, Posición, Material, etc.) *
               </label>
-              <label className="text-xs text-cyan-400 hover:text-cyan-300 cursor-pointer font-medium flex items-center gap-1">
+              <label className="text-xs text-[#0a5c36] hover:text-[#08482a] cursor-pointer font-bold flex items-center gap-1">
                 <FileText className="w-3.5 h-3.5" />
                 <span>Cargar archivo</span>
                 <input
@@ -162,12 +162,12 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
               placeholder="Entrega&#9;Posición&#9;Destinatario mcía.&#9;Material&#9;Cantidad entrega&#9;Un.medida venta...&#10;507102148&#9;10&#9;52847&#9;3071&#9;3&#9;CJ..."
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-mono text-xs focus:border-cyan-400 focus:outline-none leading-relaxed resize-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 font-mono text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none leading-relaxed resize-none shadow-xs"
             />
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-slate-500 font-medium">
               Detecta automáticamente delimitadores tabulados, puntos y comas.
             </span>
 
@@ -175,14 +175,14 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-xs font-bold shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all cursor-pointer"
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-[#0a5c36] hover:bg-[#08482a] text-white text-xs font-bold shadow-md shadow-emerald-950/20 disabled:opacity-50 transition-all cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -191,7 +191,7 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 text-emerald-300" />
                     <span>Procesar e Ingestar</span>
                   </>
                 )}

@@ -36,28 +36,28 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
   });
 
   return (
-    <div className="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-xl">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
       
       {/* Cabecera del Detalle */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-800/60 flex items-center justify-center text-cyan-400 font-black">
-              <PackageCheck className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#0a5c36] font-black shadow-xs">
+              <PackageCheck className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-base font-bold text-white tracking-wide">
+                <h3 className="text-base font-black text-slate-900 tracking-wide">
                   Matriz de Preparación por SKU
                 </h3>
-                <span className="px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-700/60 font-mono text-xs text-cyan-300 font-bold">
+                <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 font-mono text-xs text-[#0a5c36] font-bold shadow-xs">
                   TKNUM: {transport.numero_transporte}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-medium">
+                <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
                   {transport.cliente}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">
                 {transport.semana} • {transport.cantidad_pallet} Pallets • {transport.total_skus} SKUs en lista
               </p>
             </div>
@@ -69,23 +69,23 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
           
           {/* Búsqueda de SKU o descripción */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar SKU o nombre..."
+              placeholder="Buscar SKU o descripción..."
               value={skuSearch}
               onChange={(e) => setSkuSearch(e.target.value)}
-              className="bg-slate-900 border border-slate-800 text-xs rounded-lg pl-8 pr-3 py-1.5 text-slate-200 placeholder-slate-500 focus:border-cyan-500 focus:outline-none w-48 transition-all"
+              className="bg-slate-50 border border-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 text-slate-800 placeholder-slate-400 focus:border-[#0a5c36] focus:bg-white focus:outline-none w-48 transition-all shadow-xs"
             />
           </div>
 
           {/* Toggle Solo Diferencias */}
           <button
             onClick={() => setOnlyDifferences(!onlyDifferences)}
-            className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer shadow-xs ${
               onlyDifferences 
-                ? 'bg-rose-950/60 border-rose-700 text-rose-300 shadow-sm shadow-rose-950' 
-                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                ? 'bg-rose-50 border-rose-300 text-rose-700 font-bold' 
+                : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
@@ -95,16 +95,16 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
           {/* Preparar 100% */}
           <button
             onClick={() => onPrepareAll(true)}
-            className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-[#0a5c36] hover:bg-[#08482a] text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
           >
-            <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCheck className="w-3.5 h-3.5 text-emerald-300" />
             <span className="hidden sm:inline">Preparar 100%</span>
           </button>
 
           {/* Resetear a 0 */}
           <button
             onClick={() => onPrepareAll(false)}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 text-xs transition-all active:scale-95 cursor-pointer"
+            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 text-xs transition-all active:scale-95 cursor-pointer shadow-xs"
             title="Reiniciar cantidades preparadas a 0"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -113,7 +113,7 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
           {/* Exportar Excel */}
           <button
             onClick={onExportExcel}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-900/40 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Descargar Excel</span>
@@ -123,10 +123,10 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
       </div>
 
       {/* Tabla con las 11 columnas exactas solicitadas */}
-      <div className="overflow-x-auto mt-4 max-h-[580px] overflow-y-auto">
+      <div className="overflow-x-auto mt-4 max-h-[580px] overflow-y-auto border border-slate-200 rounded-xl">
         <table className="w-full text-left border-collapse text-xs">
-          <thead className="sticky top-0 z-10 bg-slate-900 shadow-sm">
-            <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+          <thead className="sticky top-0 z-10 bg-slate-50 shadow-xs">
+            <tr className="border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
               <th className="py-2.5 px-3">SKU</th>
               <th className="py-2.5 px-3 min-w-[220px]">descripción</th>
               <th className="py-2.5 px-3 text-right">Cantidad pedido</th>
@@ -140,7 +140,7 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
               <th className="py-2.5 px-3 text-center">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 font-medium">
+          <tbody className="divide-y divide-slate-100 font-medium">
             {filteredItems.map((item, index) => {
               const hasDiff = item.tiene_diferencias === "Si";
               return (
@@ -148,27 +148,27 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
                   key={`${item.sku}-${item.posicion || index}`}
                   className={`transition-colors ${
                     hasDiff 
-                      ? 'bg-rose-950/15 hover:bg-rose-950/25' 
-                      : index % 2 === 0 ? 'bg-transparent hover:bg-slate-800/30' : 'bg-slate-900/30 hover:bg-slate-800/40'
+                      ? 'bg-rose-50/50 hover:bg-rose-50' 
+                      : index % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/40 hover:bg-slate-50'
                   }`}
                 >
                   {/* 1. SKU */}
-                  <td className="py-2.5 px-3 font-mono text-cyan-400 font-bold whitespace-nowrap">
+                  <td className="py-2.5 px-3 font-mono text-[#0a5c36] font-black whitespace-nowrap">
                     {item.sku}
                   </td>
 
                   {/* 2. Descripción */}
-                  <td className="py-2.5 px-3 text-slate-200" title={item.descripcion}>
+                  <td className="py-2.5 px-3 text-slate-800 font-semibold" title={item.descripcion}>
                     {item.descripcion}
                   </td>
 
                   {/* 3. Cantidad pedido */}
-                  <td className="py-2.5 px-3 text-right font-bold text-slate-200">
+                  <td className="py-2.5 px-3 text-right font-black text-slate-900">
                     {item.cantidad_pedido}
                   </td>
 
                   {/* 4. UMV */}
-                  <td className="py-2.5 px-3 text-center text-slate-400 font-mono">
+                  <td className="py-2.5 px-3 text-center text-slate-500 font-mono font-bold">
                     {item.umv}
                   </td>
 
@@ -180,10 +180,10 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
                       max={item.cantidad_pedido * 2}
                       value={item.cantidad_preparada}
                       onChange={(e) => onUpdateItemQuantity(item.sku, parseFloat(e.target.value) || 0, item.posicion)}
-                      className={`w-18 text-center rounded px-2 py-1 font-bold text-xs border focus:outline-none transition-all ${
+                      className={`w-20 text-center rounded-lg px-2 py-1 font-black text-xs border focus:outline-none transition-all shadow-xs ${
                         hasDiff
-                          ? 'bg-rose-950/60 border-rose-600/70 text-rose-300 focus:border-rose-400'
-                          : 'bg-emerald-950/40 border-emerald-600/50 text-emerald-300 focus:border-emerald-400'
+                          ? 'bg-rose-50 border-rose-300 text-rose-800 focus:border-rose-500'
+                          : 'bg-emerald-50 border-emerald-300 text-[#0a5c36] focus:border-[#0a5c36]'
                       }`}
                     />
                   </td>
@@ -191,41 +191,41 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
                   {/* 6. Diferencia preparación */}
                   <td className="py-2.5 px-3 text-center font-bold">
                     {hasDiff ? (
-                      <span className="inline-block px-2 py-0.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800/60 font-mono text-xs">
+                      <span className="inline-block px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-mono text-xs font-black shadow-xs">
                         {item.diferencia_preparacion}
                       </span>
                     ) : (
-                      <span className="text-slate-500 font-mono text-sm">
+                      <span className="text-slate-400 font-mono text-sm">
                         -
                       </span>
                     )}
                   </td>
 
                   {/* 7. Cliente */}
-                  <td className="py-2.5 px-3 text-slate-300 whitespace-nowrap max-w-[180px] truncate" title={item.cliente}>
+                  <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap max-w-[180px] truncate font-medium" title={item.cliente}>
                     {item.cliente}
                   </td>
 
                   {/* 8. Documento transporte */}
-                  <td className="py-2.5 px-3 text-center font-mono text-slate-400">
+                  <td className="py-2.5 px-3 text-center font-mono text-slate-600 font-bold">
                     {item.documento_transporte}
                   </td>
 
                   {/* 9. Fecha */}
-                  <td className="py-2.5 px-3 text-center font-medium text-slate-300 whitespace-nowrap">
+                  <td className="py-2.5 px-3 text-center font-medium text-slate-600 whitespace-nowrap">
                     {item.fecha}
                   </td>
 
                   {/* 10. Tiene diferencias */}
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
                     {hasDiff ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-950 border border-rose-700 text-rose-400 font-bold text-[10px]">
-                        <AlertTriangle className="w-2.5 h-2.5" />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[10px] shadow-xs">
+                        <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
                         Si
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-semibold text-[10px]">
-                        <CheckCircle2 className="w-2.5 h-2.5" />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[#0a5c36] font-bold text-[10px] shadow-xs">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
                         No
                       </span>
                     )}
@@ -233,12 +233,12 @@ export const DetailSkuTable: React.FC<DetailSkuTableProps> = ({
 
                   {/* 11. Status */}
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border shadow-xs ${
                       item.status === 'Listo'
-                        ? 'bg-emerald-950/50 border-emerald-700/60 text-emerald-300'
+                        ? 'bg-emerald-50 border-emerald-200 text-[#0a5c36]'
                         : item.status === 'Parcial'
-                        ? 'bg-amber-950/50 border-amber-700/60 text-amber-300'
-                        : 'bg-slate-800 border-slate-700 text-slate-400'
+                        ? 'bg-amber-50 border-amber-200 text-amber-800'
+                        : 'bg-slate-100 border-slate-200 text-slate-600'
                     }`}>
                       {item.status}
                     </span>

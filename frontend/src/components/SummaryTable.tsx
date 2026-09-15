@@ -68,21 +68,21 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
   });
 
   return (
-    <div className="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-xl mb-8">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-8">
       
       {/* Barra superior de Resumen */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
           <div className="flex items-center space-x-2">
-            <h2 className="text-base font-bold text-white tracking-wide uppercase flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-cyan-400" />
+            <h2 className="text-base font-black text-slate-900 tracking-wide uppercase flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#0a5c36]" />
               Resumen Operativo por Semana y Transporte
             </h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-semibold">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[#0a5c36] font-bold">
               {filteredTransports.length} activos
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1 font-medium">
             Modifica en tiempo real la cantidad de pallets, el estado de preparación y despacho.
           </p>
         </div>
@@ -90,16 +90,16 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
         {/* Filtros */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Selector de Semana */}
-          <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
+          <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-xs">
+            <Filter className="w-3.5 h-3.5 text-slate-500" />
             <select
               value={selectedSemana}
               onChange={(e) => setSelectedSemana(e.target.value)}
-              className="bg-transparent text-xs text-slate-200 font-medium focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs text-slate-700 font-semibold focus:outline-none cursor-pointer"
             >
-              <option value="TODAS" className="bg-slate-900">Todas las Semanas</option>
+              <option value="TODAS">Todas las Semanas</option>
               {semanas.map(s => (
-                <option key={s} value={s} className="bg-slate-900">{s}</option>
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
@@ -110,7 +110,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
             placeholder="Buscar por cliente o N° transporte..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-slate-900 border border-slate-800 text-xs rounded-lg px-3 py-1.5 text-slate-200 placeholder-slate-500 focus:border-cyan-500 focus:outline-none w-56 transition-all"
+            className="bg-slate-50 border border-slate-200 text-xs rounded-lg px-3 py-1.5 text-slate-800 placeholder-slate-400 focus:border-[#0a5c36] focus:bg-white focus:outline-none w-56 transition-all shadow-xs"
           />
         </div>
       </div>
@@ -119,14 +119,14 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
       <div className="overflow-x-auto mt-4">
         {filteredTransports.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
-            <Truck className="w-12 h-12 mx-auto text-slate-700 mb-3" />
-            No hay despachos registrados para esta selección.
-            <p className="text-xs text-slate-600 mt-1">Haz clic en "Conectar SAP" o "Pegar Datos" para agregar uno.</p>
+            <Truck className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+            <p className="font-semibold text-slate-700">No hay despachos registrados para esta selección.</p>
+            <p className="text-xs text-slate-500 mt-1">Haz clic en "Conectar SAP" o "Pegar Datos" para agregar uno.</p>
           </div>
         ) : (
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px] bg-slate-900/50">
+              <tr className="border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px] bg-slate-50">
                 <th className="py-3 px-3">Semana</th>
                 <th className="py-3 px-3">Cliente</th>
                 <th className="py-3 px-3">N° Transporte</th>
@@ -139,7 +139,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                 <th className="py-3 px-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {filteredTransports.map((t) => {
                 const isSelected = t.id === selectedTransportId;
                 const hasDifferences = t.skus_con_diferencia > 0;
@@ -149,8 +149,8 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                     key={t.id}
                     className={`transition-colors cursor-pointer group ${
                       isSelected 
-                        ? 'bg-cyan-950/20 border-l-4 border-l-cyan-400' 
-                        : 'hover:bg-slate-800/40'
+                        ? 'bg-emerald-50/70 border-l-4 border-l-[#0a5c36]' 
+                        : 'hover:bg-slate-50'
                     }`}
                     onClick={() => onSelectTransport(t.id)}
                   >
@@ -161,18 +161,18 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                         value={t.semana}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => onUpdateSummary(t.id, { semana: e.target.value })}
-                        className="bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-slate-200 text-xs font-semibold focus:border-cyan-400 focus:outline-none w-24"
+                        className="bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 text-xs font-semibold focus:border-[#0a5c36] focus:outline-none w-24 shadow-xs"
                       />
                     </td>
 
                     {/* 2. Cliente */}
-                    <td className="py-3.5 px-3 max-w-[200px] truncate font-medium text-slate-200" title={t.cliente}>
+                    <td className="py-3.5 px-3 max-w-[200px] truncate font-semibold text-slate-800" title={t.cliente}>
                       {t.cliente}
                     </td>
 
                     {/* 3. Número de transporte */}
                     <td className="py-3.5 px-3 whitespace-nowrap">
-                      <span className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 font-mono text-cyan-400 font-bold">
+                      <span className="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 font-mono text-[#0a5c36] font-black text-xs">
                         {t.numero_transporte}
                       </span>
                     </td>
@@ -186,9 +186,9 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                           max="99"
                           value={t.cantidad_pallet}
                           onChange={(e) => onUpdateSummary(t.id, { cantidad_pallet: parseInt(e.target.value) || 0 })}
-                          className="w-14 text-center bg-amber-950/40 border border-amber-600/50 text-amber-300 font-bold rounded px-1.5 py-1 text-xs focus:border-amber-400 focus:outline-none"
+                          className="w-14 text-center bg-amber-50 border border-amber-300 text-amber-900 font-black rounded px-1.5 py-1 text-xs focus:border-amber-500 focus:outline-none shadow-xs"
                         />
-                        <span className="text-[10px] text-slate-400 font-semibold">PLT</span>
+                        <span className="text-[10px] text-slate-500 font-bold">PLT</span>
                       </div>
                     </td>
 
@@ -197,10 +197,10 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                       <select
                         value={t.preparado}
                         onChange={(e) => onUpdateSummary(t.id, { preparado: e.target.value })}
-                        className="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2 py-1 text-slate-200 font-medium focus:border-cyan-400 focus:outline-none cursor-pointer"
+                        className="bg-white border border-slate-200 text-xs rounded-lg px-2 py-1 text-slate-800 font-medium focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
                       >
                         {PREPARADO_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value} className="bg-slate-900">
+                          <option key={opt.value} value={opt.value}>
                             {opt.label}
                           </option>
                         ))}
@@ -212,10 +212,10 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                       <select
                         value={t.despachado}
                         onChange={(e) => onUpdateSummary(t.id, { despachado: e.target.value })}
-                        className="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2 py-1 text-slate-200 font-medium focus:border-cyan-400 focus:outline-none cursor-pointer"
+                        className="bg-white border border-slate-200 text-xs rounded-lg px-2 py-1 text-slate-800 font-medium focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
                       >
                         {DESPACHADO_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value} className="bg-slate-900">
+                          <option key={opt.value} value={opt.value}>
                             {opt.label}
                           </option>
                         ))}
@@ -227,10 +227,10 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                       <select
                         value={t.fase_global}
                         onChange={(e) => onUpdateSummary(t.id, { fase_global: e.target.value })}
-                        className="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2 py-1 text-slate-200 font-semibold focus:border-cyan-400 focus:outline-none cursor-pointer"
+                        className="bg-white border border-slate-200 text-xs rounded-lg px-2 py-1 text-slate-800 font-bold focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
                       >
                         {FASE_GLOBAL_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value} className="bg-slate-900">
+                          <option key={opt.value} value={opt.value}>
                             {opt.label}
                           </option>
                         ))}
@@ -239,20 +239,20 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
 
                     {/* 8. Cajas (Prep / Ped) */}
                     <td className="py-3.5 px-3 text-center whitespace-nowrap font-medium">
-                      <span className="text-emerald-400 font-bold">{t.total_cajas_preparadas}</span>
-                      <span className="text-slate-500"> / {t.total_cajas_pedido}</span>
+                      <span className="text-[#0a5c36] font-bold">{t.total_cajas_preparadas}</span>
+                      <span className="text-slate-400 font-medium"> / {t.total_cajas_pedido}</span>
                     </td>
 
                     {/* 9. Diferencias */}
                     <td className="py-3.5 px-3 text-center whitespace-nowrap">
                       {hasDifferences ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-950/60 border border-rose-700/60 text-rose-300 font-bold text-[11px]">
-                          <AlertTriangle className="w-3 h-3 text-rose-400" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 font-bold text-[11px] shadow-xs">
+                          <AlertTriangle className="w-3 h-3 text-rose-600" />
                           {t.skus_con_diferencia} SKUs
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-700/60 text-emerald-300 font-semibold text-[11px]">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[#0a5c36] font-bold text-[11px] shadow-xs">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           Sin dif.
                         </span>
                       )}
@@ -266,7 +266,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                         <button
                           onClick={() => onExportExcel(t.id)}
                           title="Descargar Excel de este transporte"
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-emerald-950/60 hover:text-emerald-300 text-slate-400 border border-slate-700/60 transition-all cursor-pointer"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-[#0a5c36] text-slate-600 border border-slate-200 transition-all cursor-pointer shadow-xs"
                         >
                           <FileSpreadsheet className="w-3.5 h-3.5" />
                         </button>
@@ -275,10 +275,10 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                         <button
                           onClick={() => onSelectTransport(t.id)}
                           title="Ver y editar detalle de preparación por SKU"
-                          className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                          className={`p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs ${
                             isSelected 
-                              ? 'bg-cyan-500 text-black border-cyan-400 font-bold' 
-                              : 'bg-slate-800 text-cyan-400 border-slate-700/60 hover:bg-slate-700'
+                              ? 'bg-[#0a5c36] text-white border-[#08482a] font-bold' 
+                              : 'bg-slate-100 text-[#0a5c36] border-slate-200 hover:bg-emerald-50'
                           }`}
                         >
                           <ChevronRight className="w-3.5 h-3.5" />
@@ -288,7 +288,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                         <button
                           onClick={() => onDeleteTransport(t.id)}
                           title="Eliminar transporte"
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 hover:text-rose-400 text-slate-500 border border-slate-700/60 transition-all cursor-pointer"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 transition-all cursor-pointer shadow-xs"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

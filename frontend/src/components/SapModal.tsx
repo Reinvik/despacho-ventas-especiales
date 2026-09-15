@@ -48,27 +48,27 @@ export const SapModal: React.FC<SapModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
         
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+        {/* Header CIAL */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#08482a] bg-[#0a5c36] text-white">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400">
-              <Zap className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300">
+              <Zap className="w-5 h-5 fill-amber-300" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">
                 Conectar a SAP GUI (VL06O)
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-emerald-200 font-medium">
                 Extracción automática vía SAP Scripting Engine (COM)
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -78,27 +78,27 @@ export const SapModal: React.FC<SapModalProps> = ({
         <div className="px-6 pt-4 space-y-3">
           <div className={`p-3.5 rounded-xl border flex items-start space-x-2.5 text-xs ${
             isSapRunning 
-              ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300' 
+              ? 'bg-emerald-50 border-emerald-200 text-[#0a5c36]' 
               : sapStatus?.is_local_bridge
-              ? 'bg-amber-950/40 border-amber-800/60 text-amber-300'
-              : 'bg-blue-950/40 border-blue-800/60 text-cyan-300'
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
             {isSapRunning ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-4 h-4 text-[#0a5c36] shrink-0 mt-0.5" />
             ) : sapStatus?.is_local_bridge ? (
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             ) : (
-              <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-[#0a5c36] shrink-0 mt-0.5" />
             )}
             <div>
-              <p className="font-semibold">
+              <p className="font-bold">
                 {isSapRunning 
                   ? 'SAP GUI detectado en tu equipo (Sesión Activa)' 
                   : sapStatus?.is_local_bridge
                   ? 'Agente Local Activo • Falta abrir SAP Logon'
                   : 'Modo Web (dve.nexusnetwork.cl)'}
               </p>
-              <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+              <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
                 {isSapRunning
                   ? 'Listo para conectar a la sesión activa mediante GetObject("SAPGUI") y ejecutar VL06O automáticamente.'
                   : sapStatus?.is_local_bridge
@@ -109,13 +109,13 @@ export const SapModal: React.FC<SapModalProps> = ({
           </div>
 
           {/* Descargas directas de scripts */}
-          <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex flex-wrap gap-2 items-center justify-between text-xs">
-            <span className="text-slate-400 font-medium">📥 Descargar utilidades Windows:</span>
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex flex-wrap gap-2 items-center justify-between text-xs">
+            <span className="text-slate-600 font-bold text-[11px]">📥 Utilidades Windows:</span>
             <div className="flex gap-2">
               <a
                 href="/Extraer_SAP_y_Enviar_a_la_Web.vbs"
                 download="Extraer_SAP_y_Enviar_a_la_Web.vbs"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-800 text-cyan-300 text-[11px] font-semibold transition-all"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0a5c36] hover:bg-[#08482a] text-white text-[11px] font-bold shadow-xs transition-all"
                 title="Descargar script Windows de 1 clic (No requiere Python)"
               >
                 <Download className="w-3 h-3" />
@@ -124,7 +124,7 @@ export const SapModal: React.FC<SapModalProps> = ({
               <a
                 href="/iniciar_app.bat"
                 download="iniciar_app.bat"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[11px] font-semibold transition-all"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all"
                 title="Descargar lanzador local para Windows"
               >
                 <Download className="w-3 h-3" />
@@ -137,13 +137,13 @@ export const SapModal: React.FC<SapModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
               {errorMsg}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Documento de Transporte (IT_TKNUM-LOW) *
             </label>
             <input
@@ -152,13 +152,13 @@ export const SapModal: React.FC<SapModalProps> = ({
               placeholder="Ej. 3417089"
               value={tknum}
               onChange={(e) => setTknum(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 font-mono text-sm focus:border-cyan-400 focus:outline-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 font-mono text-sm focus:border-[#0a5c36] focus:bg-white focus:outline-none transition-all shadow-xs font-bold"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Semana
               </label>
               <input
@@ -166,12 +166,12 @@ export const SapModal: React.FC<SapModalProps> = ({
                 value={semana}
                 onChange={(e) => setSemana(e.target.value)}
                 placeholder="Ej. Semana 36"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-xs focus:border-cyan-400 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Cantidad Pallets (Inicial)
               </label>
               <input
@@ -180,19 +180,19 @@ export const SapModal: React.FC<SapModalProps> = ({
                 max="50"
                 value={pallets}
                 onChange={(e) => setPallets(parseInt(e.target.value) || 0)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-xs focus:border-cyan-400 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-bold"
               />
             </div>
           </div>
 
-          <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-            <p className="font-semibold text-slate-300 flex items-center gap-1">
-              <Info className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
+            <p className="font-bold text-slate-800 flex items-center gap-1">
+              <Info className="w-3.5 h-3.5 text-[#0a5c36]" />
               Flujo de automatización SAP:
             </p>
-            <p>1. Ingresa a transacción <span className="font-mono text-cyan-300">/nvl06o</span></p>
+            <p>1. Ingresa a transacción <span className="font-mono text-[#0a5c36] font-bold">/nvl06o</span></p>
             <p>2. Presiona botón 6 ("Para picking") y limpia fechas de salida</p>
-            <p>3. Asigna el número de transporte <span className="font-mono text-cyan-300">{tknum || '...'}</span> y ejecuta (F8)</p>
+            <p>3. Asigna el número de transporte <span className="font-mono text-[#0a5c36] font-bold">{tknum || '...'}</span> y ejecuta (F8)</p>
             <p>4. Exporta la lista y la ingesta directamente a la aplicación</p>
           </div>
 
@@ -200,14 +200,14 @@ export const SapModal: React.FC<SapModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/20 disabled:opacity-50 transition-all cursor-pointer"
+              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 disabled:opacity-50 transition-all cursor-pointer"
             >
               {loading ? (
                 <>
@@ -216,7 +216,7 @@ export const SapModal: React.FC<SapModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Zap className="w-4 h-4" />
+                  <Zap className="w-4 h-4 fill-slate-950" />
                   <span>Conectar y Extraer</span>
                 </>
               )}
