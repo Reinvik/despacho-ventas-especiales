@@ -56,5 +56,24 @@ def test_parse_sample():
     assert first.documento_transporte == "3417089"
     print("Test passed successfully! Total items:", len(summary.items))
 
+def test_thousands_dot_separator():
+    from data_parser import parse_number
+    # Validación específica requerida por el usuario:
+    assert parse_number("1.271") == 1271.0, f"Error: {parse_number('1.271')} != 1271.0"
+    assert parse_number("36.000") == 36000.0
+    assert parse_number("9.967,770") == 9967.77
+    assert parse_number("5,190") == 5.19
+    assert parse_number("1.271.000") == 1271000.0
+
+    raw = "Entrega\tPosición\tDestinatario mcía.\tMaterial\tMuelle\tCantidad entrega\tUn.medida venta\tFecha puesta dis.Mat\tPeso total\tUnidad de peso\tVolumen\tUnidad de volumen\tDescripción posición\tRuta\tCanal distribución\tDocumento compras\tFecha salida mcías.\tNombre solicitante\n" \
+          "507102148\t10\t52847\t3945\t\t1.271\tUN\t02-09-2026\t5,190\tKG\t9.967,770\tCM3\tCAJA SNACKIN BEEF JERKY LP 10x20 G.\tSTIAGO\tMY\t5045828999\t01-09-2026\tPIDA 2024 SPA\n"
+    res = parse_vl06o_raw_text(raw)
+    assert res.items[0].sku == "3945"
+    assert res.items[0].cantidad_pedido == 1271.0
+    assert res.items[0].cantidad_preparada == 1271.0
+    print("Thousands dot test passed! 1.271 -> 1271 verificado con éxito.")
+
 if __name__ == "__main__":
     test_parse_sample()
+    test_thousands_dot_separator()
+

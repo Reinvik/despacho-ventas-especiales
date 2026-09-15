@@ -46,13 +46,29 @@ export function calculateIsoWeek(dateStr: string): string {
 
 export function parseNumberClient(val: any): number {
   if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
   let s = String(val).trim().replace(/\s+/g, '');
   if (!s) return 0;
+
+  // Manejo de miles y decimales en SAP Chile / Latinoamérica
   if (s.includes('.') && s.includes(',')) {
-    s = s.replace(/\./g, '').replace(',', '.');
+    if (s.lastIndexOf('.') < s.lastIndexOf(',')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (s.includes('.')) {
+    // Solo puntos: ej. '1.271', '36.000', '1.271.000'
+    // En SAP Chile, punto es separador de miles si tiene 3 dígitos por bloque o múltiples puntos
+    const dotParts = s.split('.');
+    const isThousands = dotParts.length > 2 || (dotParts.length === 2 && dotParts[1].length === 3);
+    if (isThousands) {
+      s = s.replace(/\./g, '');
+    }
   } else if (s.includes(',')) {
     s = s.replace(',', '.');
   }
+
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }

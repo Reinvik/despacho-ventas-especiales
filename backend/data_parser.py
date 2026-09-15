@@ -48,23 +48,35 @@ def calculate_iso_week(date_str: str) -> str:
     return f"Semana {now.isocalendar()[1]}"
 
 def parse_number(val: str) -> float:
-    """Convierte cadenas numéricas chilenas/SAP (ej. '5.190', '9.967,770', '3') a float."""
-    if not val:
+    """Convierte cadenas numéricas chilenas/SAP (ej. '1.271', '5.190', '9.967,770', '3') a float."""
+    if val is None:
         return 0.0
-    s = str(val).strip()
+    s = str(val).strip().replace(" ", "")
     if not s:
         return 0.0
-    # Remover espacios
-    s = s.replace(" ", "")
-    # Manejar formatos 9.967,770 (punto miles, coma decimal)
+
+    # Manejo de miles y decimales en SAP Chile / Latinoamérica
     if "." in s and "," in s:
-        s = s.replace(".", "").replace(",", ".")
+        # Estándar SAP Chile: 1.234,56 (punto miles, coma decimal)
+        if s.rfind(".") < s.rfind(","):
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            # Estándar US: 1,234.56
+            s = s.replace(",", "")
+    elif "." in s:
+        # Solo puntos: ej. '1.271', '36.000', '1.271.000'
+        # En SAP Chile, punto es separador de miles si tiene 3 dígitos por bloque o múltiples puntos
+        dot_parts = s.split(".")
+        is_thousands = len(dot_parts) > 2 or (len(dot_parts) == 2 and len(dot_parts[1]) == 3)
+        if is_thousands:
+            s = s.replace(".", "")
     elif "," in s:
+        # En SAP Chile, la coma es el separador decimal: ej. '5,190' -> 5.190
         s = s.replace(",", ".")
+
     try:
         return float(s)
     except ValueError:
-        # Intento regex solo dígitos
         digits = re.findall(r"[-+]?\d*\.?\d+", s)
         if digits:
             try:

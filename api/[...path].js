@@ -41,10 +41,30 @@ const SAMPLE_RAW_DATA = `Entrega\tPosición\tDestinatario mcía.\tMaterial\tMuel
 507102148\t350\t52847\t3034\t\t1\tCJ\t02-09-2026\t1,150\tKG\t4.898\tCM3\tSALAME 10x100 GR LP\tSTIAGO\tMY\t5045828999\t01-09-2026\tCOMERCIAL DOLLINCO S.A.\t52847\tC\tZSTD\tSLARAB`;
 
 function parseNumberNode(val) {
-  if (!val) return 0;
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
   let s = String(val).trim().replace(/\s+/g, '');
-  if (s.includes('.') && s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
-  else if (s.includes(',')) s = s.replace(',', '.');
+  if (!s) return 0;
+
+  // Manejo de miles y decimales en SAP Chile / Latinoamérica
+  if (s.includes('.') && s.includes(',')) {
+    if (s.lastIndexOf('.') < s.lastIndexOf(',')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (s.includes('.')) {
+    // Solo puntos: ej. '1.271', '36.000', '1.271.000'
+    // En SAP Chile, punto es separador de miles si tiene 3 dígitos por bloque o múltiples puntos
+    const dotParts = s.split('.');
+    const isThousands = dotParts.length > 2 || (dotParts.length === 2 && dotParts[1].length === 3);
+    if (isThousands) {
+      s = s.replace(/\./g, '');
+    }
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
