@@ -66,19 +66,31 @@ export const api = {
   },
 
   async listTransports(): Promise<TransportSummary[]> {
+    const deletedIds = localDb.getDeletedIds();
+
     // Intentar agente local primero si está activo
     const hasLocal = await checkLocalAgent();
     if (hasLocal) {
       try {
         const res = await fetch(`${LOCAL_BASE}/transports`, { signal: AbortSignal.timeout(1000) });
-        if (res.ok) return await res.json();
+        if (res.ok) {
+          const list: TransportSummary[] = await res.json();
+          const filtered = list.filter(t => !deletedIds.includes(t.id));
+          localDb.saveAll(filtered);
+          return filtered;
+        }
       } catch {}
     }
 
     // Intentar Vercel
     try {
       const res = await fetch(`${CLOUD_BASE}/transports`, { signal: AbortSignal.timeout(1500) });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const list: TransportSummary[] = await res.json();
+        const filtered = list.filter(t => !deletedIds.includes(t.id));
+        localDb.saveAll(filtered);
+        return filtered;
+      }
     } catch {}
 
     // Fallback localStorage
@@ -111,6 +123,9 @@ export const api = {
     semana_override?: string;
     cantidad_pallet?: number;
   }): Promise<TransportSummary> {
+    if (data.documento_transporte) {
+      localDb.unmarkDeleted(data.documento_transporte);
+    }
     const hasLocal = await checkLocalAgent();
     const endpoint = hasLocal ? `${LOCAL_BASE}/transports/parse-raw` : `${CLOUD_BASE}/transports/parse-raw`;
 
@@ -121,7 +136,11 @@ export const api = {
         body: JSON.stringify(data),
         signal: AbortSignal.timeout(3000)
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const parsed = await res.json();
+        localDb.save(parsed);
+        return parsed;
+      }
     } catch {}
 
     // Fallback parser cliente
@@ -233,22 +252,29 @@ export const api = {
   },
 
   async deleteTransport(id: string): Promise<void> {
+    localDb.markDeleted(id);
+    localDb.delete(id);
+
     const hasLocal = await checkLocalAgent();
     const endpoint = hasLocal ? `${LOCAL_BASE}/transports/${id}` : `${CLOUD_BASE}/transports/${id}`;
 
     try {
       await fetch(endpoint, { method: 'DELETE', signal: AbortSignal.timeout(1500) });
     } catch {}
-    localDb.delete(id);
   },
 
   async seedSample(): Promise<TransportSummary> {
+    localDb.unmarkDeleted("3417089");
     const hasLocal = await checkLocalAgent();
     const endpoint = hasLocal ? `${LOCAL_BASE}/transports/seed-sample` : `${CLOUD_BASE}/transports/seed-sample`;
 
     try {
       const res = await fetch(endpoint, { method: 'POST', signal: AbortSignal.timeout(1500) });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        localDb.save(data);
+        return data;
+      }
     } catch {}
 
     const sample = getClientSampleSummary();

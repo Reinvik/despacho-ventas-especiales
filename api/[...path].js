@@ -2,6 +2,7 @@
 // Maneja todas las rutas /api/* en Vercel
 
 let memoryTransports = {};
+const deletedTransports = new Set(["3417089"]);
 
 const SAMPLE_RAW_DATA = `Entrega\tPosición\tDestinatario mcía.\tMaterial\tMuelle p.núm.almacén\tCantidad entrega\tUn.medida venta\tFecha puesta dis.Mat\tPeso total\tUnidad de peso\tVolumen\tUnidad de volumen\tDescripción posición\tRuta\tCanal distribución\tDocumento compras\tFecha salida mcías.\tNombre solicitante\tSolicitante\tEstado de picking\tClase de entrega\tAutor
 507102148\t10\t52847\t3071\t\t3\tCJ\t02-09-2026\t5,190\tKG\t9.967,770\tCM3\tPATE TERNERA 160 Gr.(x10)\tSTIAGO\tMY\t5045828999\t01-09-2026\tCOMERCIAL DOLLINCO S.A.\t52847\tC\tZSTD\tSLARAB
@@ -179,40 +180,43 @@ function parseVl06oNode(rawText, transportDoc = "3417089", clienteOverride, sema
   };
 }
 
-function initMemoryWithSample() {
-  if (Object.keys(memoryTransports).length === 0) {
-    const s = parseVl06oNode(SAMPLE_RAW_DATA, "3417089", "COMERCIAL DOLLINCO S.A.", "Semana 36", 3);
-    s.items.forEach(item => {
-      if (item.sku === "3976") {
-        item.cantidad_preparada = 0;
-        item.diferencia_preparacion = 3;
-        item.tiene_diferencias = "Si";
-        item.status = "Pendiente";
-      } else if (item.sku === "1436") {
-        item.cantidad_preparada = 1;
-        item.diferencia_preparacion = 2;
-        item.tiene_diferencias = "Si";
-        item.status = "Parcial";
-      }
-    });
-    s.total_cajas_preparadas = s.items.reduce((a, b) => a + b.cantidad_preparada, 0);
-    s.skus_con_diferencia = s.items.filter(i => i.tiene_diferencias === "Si").length;
-    memoryTransports["3417089"] = s;
+function initMemoryWithSample(force = false) {
+  if (deletedTransports.has("3417089") && !force) {
+    return null;
   }
+  const s = parseVl06oNode(SAMPLE_RAW_DATA, "3417089", "COMERCIAL DOLLINCO S.A.", "Semana 36", 3);
+  s.items.forEach(item => {
+    if (item.sku === "3976") {
+      item.cantidad_preparada = 0;
+      item.diferencia_preparacion = 3;
+      item.tiene_diferencias = "Si";
+      item.status = "Pendiente";
+    } else if (item.sku === "1436") {
+      item.cantidad_preparada = 1;
+      item.diferencia_preparacion = 2;
+      item.tiene_diferencias = "Si";
+      item.status = "Parcial";
+    }
+  });
+  s.total_cajas_preparadas = s.items.reduce((a, b) => a + b.cantidad_preparada, 0);
+  s.skus_con_diferencia = s.items.filter(i => i.tiene_diferencias === "Si").length;
+  memoryTransports["3417089"] = s;
+  if (force) {
+    deletedTransports.delete("3417089");
+  }
+  return s;
 }
 
 export default async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === 'OPTIONS' || req.method === 'HEAD') {
     return res.status(200).end();
   }
-
-  initMemoryWithSample();
 
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -246,13 +250,13 @@ export default async function handler(req, res) {
 
   // 2. GET /transports o /api/transports
   if (route === '/transports' && req.method === 'GET') {
-    return res.status(200).json(Object.values(memoryTransports));
+    return res.status(200).json(Object.values(memoryTransports).filter(t => !deletedTransports.has(t.id)));
   }
 
   // 3. POST /transports/seed-sample
   if (route === '/transports/seed-sample' && req.method === 'POST') {
-    initMemoryWithSample();
-    return res.status(200).json(memoryTransports["3417089"]);
+    const sample = initMemoryWithSample(true);
+    return res.status(200).json(sample);
   }
 
   // 4. POST /transports/parse-raw
@@ -265,6 +269,7 @@ export default async function handler(req, res) {
         body.semana_override,
         body.cantidad_pallet || 1
       );
+      deletedTransports.delete(summary.id);
       memoryTransports[summary.id] = summary;
       return res.status(200).json(summary);
     } catch (e) {
@@ -320,6 +325,7 @@ export default async function handler(req, res) {
   // 9. DELETE /transports/:id
   if (idMatch && req.method === 'DELETE') {
     const id = idMatch[1];
+    deletedTransports.add(id);
     delete memoryTransports[id];
     return res.status(200).json({ success: true, message: `Transporte ${id} eliminado` });
   }

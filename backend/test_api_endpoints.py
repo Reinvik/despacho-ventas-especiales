@@ -75,6 +75,18 @@ def test_full_flow():
     assert "vl06o" in macro["vba_macro"]
     print("   -> Macro code generation OK.")
 
+    print("9. Probando DELETE /api/transports/3417089...")
+    res = client.delete("/api/transports/3417089")
+    assert res.status_code == 200
+    print("   -> Delete 3417089 OK.")
+
+    print("10. Verificando que GET /api/transports devuelva lista vacía tras eliminación...")
+    res = client.get("/api/transports")
+    assert res.status_code == 200
+    transports = res.json()
+    assert len(transports) == 0
+    print("   -> Confirmado: Transporte 3417089 eliminado y no reaparece. Total ahora:", len(transports))
+
     print("\n[OK] TODOS LOS ENDPOINTS Y REGLAS DE NEGOCIO VERIFICADOS EXITOSAMENTE.")
 
 if __name__ == "__main__":

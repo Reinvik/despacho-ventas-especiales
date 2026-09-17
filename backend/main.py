@@ -147,9 +147,7 @@ def set_all_prepared_endpoint(transport_id: str, prepare_all: bool = Query(True)
 @app.delete("/api/transports/{transport_id}")
 def delete_transport_endpoint(transport_id: str):
     """Elimina un transporte del sistema."""
-    ok = db.delete_transport(transport_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail=f"Transporte {transport_id} no encontrado")
+    db.delete_transport(transport_id)
     return {"success": True, "message": f"Transporte {transport_id} eliminado"}
 
 @app.get("/api/transports/{transport_id}/export-excel")

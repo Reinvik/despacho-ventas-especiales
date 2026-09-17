@@ -2,16 +2,51 @@ import { TransportSummary, TransportItem } from '../types';
 import { getClientSampleSummary } from './sampleData';
 
 const STORAGE_KEY = 'dve_transports_v1';
+const DELETED_KEY = 'dve_deleted_ids_v1';
 
 export const localDb = {
-  list(): TransportSummary[] {
+  getDeletedIds(): string[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      const data = localStorage.getItem(DELETED_KEY);
       if (data) {
         return JSON.parse(data);
       }
     } catch (e) {}
-    // Si está vacío, sembrar con el sample del usuario
+    // Por defecto marcar 3417089 como eliminado para asegurar que no reaparezca
+    return ['3417089'];
+  },
+
+  markDeleted(id: string) {
+    const deleted = localDb.getDeletedIds();
+    if (!deleted.includes(id)) {
+      deleted.push(id);
+    }
+    try {
+      localStorage.setItem(DELETED_KEY, JSON.stringify(deleted));
+    } catch (e) {}
+  },
+
+  unmarkDeleted(id: string) {
+    const deleted = localDb.getDeletedIds().filter(d => d !== id);
+    try {
+      localStorage.setItem(DELETED_KEY, JSON.stringify(deleted));
+    } catch (e) {}
+  },
+
+  list(): TransportSummary[] {
+    const deletedIds = localDb.getDeletedIds();
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) {
+        const parsed: TransportSummary[] = JSON.parse(data);
+        return parsed.filter(t => !deletedIds.includes(t.id));
+      }
+    } catch (e) {}
+    // Si está eliminado 3417089, no sembrar y devolver lista vacía
+    if (deletedIds.includes('3417089')) {
+      localDb.saveAll([]);
+      return [];
+    }
     const initial = [getClientSampleSummary()];
     localDb.saveAll(initial);
     return initial;
@@ -23,6 +58,7 @@ export const localDb = {
   },
 
   save(summary: TransportSummary) {
+    localDb.unmarkDeleted(summary.id);
     const list = localDb.list();
     const idx = list.findIndex(t => t.id === summary.id);
     if (idx >= 0) {
@@ -40,6 +76,7 @@ export const localDb = {
   },
 
   delete(id: string) {
+    localDb.markDeleted(id);
     const list = localDb.list().filter(t => t.id !== id);
     localDb.saveAll(list);
   },
