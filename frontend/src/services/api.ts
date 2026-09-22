@@ -1,6 +1,6 @@
 import { TransportSummary, SapStatusResponse } from '../types';
 import { localDb } from './localStorageDb';
-import { parseVl06oClient } from './clientParser';
+import { parseVl06oClientMulti, parseVl06oClient } from './clientParser';
 import { getClientSampleSummary } from './sampleData';
 import { exportTransportToExcelClient } from './excelClient';
 
@@ -76,7 +76,7 @@ export const api = {
         if (res.ok) {
           const list: TransportSummary[] = await res.json();
           const filtered = list.filter(t => !deletedIds.includes(t.id));
-          localDb.saveAll(filtered);
+          localDb.saveMany(filtered);
           return filtered;
         }
       } catch {}
@@ -88,7 +88,7 @@ export const api = {
       if (res.ok) {
         const list: TransportSummary[] = await res.json();
         const filtered = list.filter(t => !deletedIds.includes(t.id));
-        localDb.saveAll(filtered);
+        localDb.saveMany(filtered);
         return filtered;
       }
     } catch {}
@@ -122,9 +122,10 @@ export const api = {
     cliente_override?: string;
     semana_override?: string;
     cantidad_pallet?: number;
-  }): Promise<TransportSummary> {
+  }): Promise<TransportSummary[]> {
     if (data.documento_transporte) {
-      localDb.unmarkDeleted(data.documento_transporte);
+      const ids = data.documento_transporte.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      ids.forEach(id => localDb.unmarkDeleted(id));
     }
     const hasLocal = await checkLocalAgent();
     const endpoint = hasLocal ? `${LOCAL_BASE}/transports/parse-raw` : `${CLOUD_BASE}/transports/parse-raw`;
@@ -138,41 +139,60 @@ export const api = {
       });
       if (res.ok) {
         const parsed = await res.json();
-        localDb.save(parsed);
-        return parsed;
+        const list: TransportSummary[] = Array.isArray(parsed) ? parsed : [parsed];
+        localDb.saveMany(list);
+        return list;
       }
     } catch {}
 
-    // Fallback parser cliente
-    const summary = parseVl06oClient(
+    // Fallback parser cliente con soporte multi-transporte
+    const summaries = parseVl06oClientMulti(
       data.raw_text,
       data.documento_transporte || "3417089",
       data.cliente_override,
       data.semana_override,
       data.cantidad_pallet || 1
     );
-    localDb.save(summary);
-    return summary;
+    localDb.saveMany(summaries);
+    return summaries;
   },
 
   async extractFromSap(data: {
     documento_transporte: string;
     semana?: string;
     cantidad_pallet?: number;
-  }): Promise<{ success: boolean; message: string; data: TransportSummary }> {
+  }): Promise<{ success: boolean; message: string; data: TransportSummary; list?: TransportSummary[] }> {
+    const tknums = data.documento_transporte.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+
     // 1. Si el agente local en Windows está corriendo, conectar directamente
     const hasLocal = await checkLocalAgent();
     if (hasLocal) {
-      const res = await fetch(`${LOCAL_BASE}/sap/extract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.detail || json.error || 'Error al conectar con SAP GUI en Windows');
+      const results: TransportSummary[] = [];
+      for (const tk of tknums) {
+        try {
+          const res = await fetch(`${LOCAL_BASE}/sap/extract`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, documento_transporte: tk }),
+          });
+          const json = await res.json();
+          if (res.ok && json.data) {
+            results.push(json.data);
+            localDb.save(json.data);
+          }
+        } catch (e) {}
       }
-      return json;
+      if (results.length > 0) {
+        return {
+          success: true,
+          message: results.length === 1 
+            ? `Transporte ${results[0].numero_transporte} extraído con éxito desde SAP.`
+            : `Se extrajeron ${results.length} transportes exitosamente desde SAP.`,
+          data: results[0],
+          list: results
+        };
+      }
+      throw new Error('Error al conectar con SAP GUI en Windows para los transportes indicados.');
     }
 
     // 2. Si estamos en la nube sin agente local:
@@ -284,6 +304,11 @@ export const api = {
 
   exportExcelSingle(summary: TransportSummary) {
     exportTransportToExcelClient(summary);
+  },
+
+  exportExcelWeek(summaries: TransportSummary[], semana: string) {
+    const weekSummaries = summaries.filter(s => s.semana.toLowerCase() === semana.toLowerCase());
+    exportTransportToExcelClient(weekSummaries, semana);
   },
 
   exportExcelAll(summaries: TransportSummary[]) {

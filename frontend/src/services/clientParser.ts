@@ -73,13 +73,13 @@ export function parseNumberClient(val: any): number {
   return isNaN(n) ? 0 : n;
 }
 
-export function parseVl06oClient(
+export function parseVl06oClientMulti(
   rawText: string,
   transportDoc = "3417089",
   clienteOverride?: string,
   semanaOverride?: string,
   cantidadPallet = 1
-): TransportSummary {
+): TransportSummary[] {
   const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) {
     throw new Error("El texto está vacío.");
@@ -115,7 +115,9 @@ export function parseVl06oClient(
         if (!("fecha" in colMap)) colMap["fecha"] = idx;
       } else if (c.includes("entrega")) colMap["entrega"] = idx;
       else if (c.includes("posición") || c.includes("posicion")) colMap["posicion"] = idx;
-      else if (c.includes("peso")) colMap["peso"] = idx;
+      else if (c.includes("transporte") || c.includes("tknum") || c.includes("doc. trans") || c.includes("n° trans")) {
+        colMap["transporte"] = idx;
+      } else if (c.includes("peso")) colMap["peso"] = idx;
       else if (c.includes("volumen")) colMap["volumen"] = idx;
       else if (c.includes("ruta")) colMap["ruta"] = idx;
       else if (c.includes("compras")) colMap["documento_compras"] = idx;
@@ -128,6 +130,13 @@ export function parseVl06oClient(
       cliente: 17
     });
   }
+
+  // Extraer lista de TKNUMs ingresados (si el usuario puso varios separados por coma o espacio)
+  const inputTknums = (transportDoc || "")
+    .split(/[,;\s]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  const defaultTknum = inputTknums[0] || "3417089";
 
   const items: TransportItem[] = [];
   let detectedClient = clienteOverride || "";
@@ -158,6 +167,12 @@ export function parseVl06oClient(
     const qtyPrep = qtyPed; // Default al 100%
     const diff = qtyPed - qtyPrep;
 
+    // Detectar el documento de transporte de la fila o usar el asignado
+    let rowTknum = getCol("transporte") || defaultTknum;
+    if (rowTknum.length < 3 && defaultTknum) {
+      rowTknum = defaultTknum;
+    }
+
     items.push({
       sku,
       descripcion: desc,
@@ -166,7 +181,7 @@ export function parseVl06oClient(
       cantidad_preparada: qtyPrep,
       diferencia_preparacion: diff,
       cliente: cliRow,
-      documento_transporte: transportDoc,
+      documento_transporte: rowTknum,
       fecha: fechaFmt,
       tiene_diferencias: diff !== 0 ? "Si" : "No",
       status: diff === 0 ? "Listo" : "Pendiente",
@@ -183,29 +198,55 @@ export function parseVl06oClient(
     throw new Error("No se encontraron productos válidos en el texto ingresado.");
   }
 
-  const totalPed = items.reduce((a, b) => a + b.cantidad_pedido, 0);
-  const totalPrep = items.reduce((a, b) => a + b.cantidad_preparada, 0);
-  const diffCount = items.filter(i => i.tiene_diferencias === "Si").length;
   const finalClient = clienteOverride || detectedClient || "COMERCIAL DOLLINCO S.A.";
   const finalSemana = semanaOverride || calculateIsoWeek(detectedDateRaw);
-
   const nowStr = new Date().toLocaleDateString('es-CL');
 
-  return {
-    id: transportDoc,
-    semana: finalSemana,
-    cliente: finalClient,
-    numero_transporte: transportDoc,
-    cantidad_pallet: cantidadPallet,
-    preparado: diffCount === 0 ? "Listo" : "Con Diferencias",
-    despachado: "Pendiente",
-    fase_global: "En Preparación",
-    total_cajas_pedido: totalPed,
-    total_cajas_preparadas: totalPrep,
-    total_skus: items.length,
-    skus_con_diferencia: diffCount,
-    fecha_creacion: nowStr,
-    fecha_actualizacion: nowStr,
-    items
-  };
+  // Agrupar items por documento de transporte
+  const groupedByTknum: Record<string, TransportItem[]> = {};
+  for (const item of items) {
+    const doc = item.documento_transporte || defaultTknum;
+    if (!groupedByTknum[doc]) {
+      groupedByTknum[doc] = [];
+    }
+    groupedByTknum[doc].push(item);
+  }
+
+  const summaries: TransportSummary[] = Object.entries(groupedByTknum).map(([doc, docItems]) => {
+    const totalPed = docItems.reduce((a, b) => a + b.cantidad_pedido, 0);
+    const totalPrep = docItems.reduce((a, b) => a + b.cantidad_preparada, 0);
+    const diffCount = docItems.filter(i => i.tiene_diferencias === "Si").length;
+    const clientForDoc = docItems.find(i => i.cliente)?.cliente || finalClient;
+
+    return {
+      id: doc,
+      semana: finalSemana,
+      cliente: clientForDoc,
+      numero_transporte: doc,
+      cantidad_pallet: cantidadPallet,
+      preparado: diffCount === 0 ? "Listo" : "Con Diferencias",
+      despachado: "Pendiente",
+      fase_global: "En Preparación",
+      total_cajas_pedido: totalPed,
+      total_cajas_preparadas: totalPrep,
+      total_skus: docItems.length,
+      skus_con_diferencia: diffCount,
+      fecha_creacion: nowStr,
+      fecha_actualizacion: nowStr,
+      items: docItems
+    };
+  });
+
+  return summaries;
+}
+
+export function parseVl06oClient(
+  rawText: string,
+  transportDoc = "3417089",
+  clienteOverride?: string,
+  semanaOverride?: string,
+  cantidadPallet = 1
+): TransportSummary {
+  const multi = parseVl06oClientMulti(rawText, transportDoc, clienteOverride, semanaOverride, cantidadPallet);
+  return multi[0];
 }

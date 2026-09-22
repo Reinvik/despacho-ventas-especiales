@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Truck, 
   Layers, 
@@ -10,7 +10,11 @@ import {
   Clock, 
   AlertTriangle,
   ArrowRight,
-  Filter
+  Filter,
+  Plus,
+  PackageCheck,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { TransportSummary } from '../types';
 
@@ -21,6 +25,7 @@ interface SummaryTableProps {
   onUpdateSummary: (id: string, updates: Partial<TransportSummary>) => void;
   onDeleteTransport: (id: string) => void;
   onExportExcel: (id: string) => void;
+  onExportWeekExcel?: (semana: string) => void;
 }
 
 const FASE_GLOBAL_OPTIONS = [
@@ -50,78 +55,279 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
   onSelectTransport,
   onUpdateSummary,
   onDeleteTransport,
-  onExportExcel
+  onExportExcel,
+  onExportWeekExcel
 }) => {
-  const [selectedSemana, setSelectedSemana] = useState<string>("TODAS");
+  const [activeSemanaTab, setActiveSemanaTab] = useState<string>("TODAS");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showAddWeekInput, setShowAddWeekInput] = useState<boolean>(false);
+  const [newWeekName, setNewWeekName] = useState<string>("");
+  const [customSemanas, setCustomSemanas] = useState<string[]>([]);
 
-  // Obtener lista única de semanas
-  const semanas = Array.from(new Set(transports.map(t => t.semana))).sort();
+  // Obtener lista completa y ordenada de semanas (extraídas de transportes + personalizadas)
+  const allSemanas = useMemo(() => {
+    const set = new Set([...transports.map(t => t.semana), ...customSemanas]);
+    return Array.from(set).filter(Boolean).sort();
+  }, [transports, customSemanas]);
 
-  // Filtrado
-  const filteredTransports = transports.filter(t => {
-    const matchSemana = selectedSemana === "TODAS" || t.semana === selectedSemana;
-    const matchQuery = 
-      t.cliente.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.numero_transporte.includes(searchQuery);
-    return matchSemana && matchQuery;
-  });
+  // Manejo de creación rápida de nueva semana
+  const handleCreateWeek = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newWeekName.trim()) {
+      const clean = newWeekName.trim();
+      if (!customSemanas.includes(clean)) {
+        setCustomSemanas(prev => [...prev, clean]);
+      }
+      setActiveSemanaTab(clean);
+      setNewWeekName("");
+      setShowAddWeekInput(false);
+    }
+  };
+
+  // Filtrado de transportes
+  const filteredTransports = useMemo(() => {
+    return transports.filter(t => {
+      const matchSemana = activeSemanaTab === "TODAS" || t.semana === activeSemanaTab;
+      const matchQuery = 
+        t.cliente.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.numero_transporte.includes(searchQuery);
+      return matchSemana && matchQuery;
+    });
+  }, [transports, activeSemanaTab, searchQuery]);
+
+  // Agrupación por semana para vista "TODAS" o vistas agrupadas
+  const groupedBySemana = useMemo(() => {
+    const groups: Record<string, TransportSummary[]> = {};
+    for (const t of filteredTransports) {
+      if (!groups[t.semana]) groups[t.semana] = [];
+      groups[t.semana].push(t);
+    }
+    return groups;
+  }, [filteredTransports]);
+
+  // Métricas agregadas de la selección actual
+  const currentMetrics = useMemo(() => {
+    const totalDocs = filteredTransports.length;
+    const totalPallets = filteredTransports.reduce((a, b) => a + (b.cantidad_pallet || 0), 0);
+    const totalCajasPed = filteredTransports.reduce((a, b) => a + (b.total_cajas_pedido || 0), 0);
+    const totalCajasPrep = filteredTransports.reduce((a, b) => a + (b.total_cajas_preparadas || 0), 0);
+    const diffCount = filteredTransports.reduce((a, b) => a + (b.skus_con_diferencia || 0), 0);
+    const prepPercent = totalCajasPed > 0 ? Math.round((totalCajasPrep / totalCajasPed) * 100) : 0;
+    return { totalDocs, totalPallets, totalCajasPed, totalCajasPrep, diffCount, prepPercent };
+  }, [filteredTransports]);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-8">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm mb-8 overflow-hidden">
       
-      {/* Barra superior de Resumen */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
-        <div>
-          <div className="flex items-center space-x-2">
-            <h2 className="text-base font-black text-slate-900 tracking-wide uppercase flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#0a5c36]" />
-              Resumen Operativo por Semana y Transporte
-            </h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[#0a5c36] font-bold">
-              {filteredTransports.length} activos
-            </span>
+      {/* 1. Barra de Pestañas de Semanas (Tabs Superiores) */}
+      <div className="bg-slate-50/80 border-b border-slate-200 px-5 pt-4 pb-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#0a5c36]"></span>
+              <h2 className="text-sm font-black text-slate-900 tracking-wider uppercase flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-[#0a5c36]" />
+                Segmentación y Control por Semana de Despacho
+              </h2>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
+              Organiza y filtra múltiples documentos por semana operativa. Cambia de semana en tiempo real.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-1 font-medium">
-            Modifica en tiempo real la cantidad de pallets, el estado de preparación y despacho.
-          </p>
+
+          {/* Buscador de transporte / cliente */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              placeholder="Buscar por cliente o N° transporte..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white border border-slate-200 text-xs rounded-xl px-3 py-1.5 text-slate-800 placeholder-slate-400 focus:border-[#0a5c36] focus:outline-none w-60 transition-all shadow-xs"
+            />
+          </div>
         </div>
 
-        {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Selector de Semana */}
-          <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-xs">
-            <Filter className="w-3.5 h-3.5 text-slate-500" />
-            <select
-              value={selectedSemana}
-              onChange={(e) => setSelectedSemana(e.target.value)}
-              className="bg-transparent text-xs text-slate-700 font-semibold focus:outline-none cursor-pointer"
-            >
-              <option value="TODAS">Todas las Semanas</option>
-              {semanas.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+        {/* Pestañas de Navegación por Semana */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 scrollbar-thin">
+          {/* Tab: TODAS */}
+          <button
+            onClick={() => setActiveSemanaTab("TODAS")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 cursor-pointer shadow-xs ${
+              activeSemanaTab === "TODAS"
+                ? "bg-[#0a5c36] text-white shadow-emerald-950/20"
+                : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+            }`}
+          >
+            <span>Todas las Semanas</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+              activeSemanaTab === "TODAS" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+            }`}>
+              {transports.length}
+            </span>
+          </button>
 
-          {/* Búsqueda rápida */}
-          <input
-            type="text"
-            placeholder="Buscar por cliente o N° transporte..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-xs rounded-lg px-3 py-1.5 text-slate-800 placeholder-slate-400 focus:border-[#0a5c36] focus:bg-white focus:outline-none w-56 transition-all shadow-xs"
-          />
+          {/* Tabs: Cada Semana existente */}
+          {allSemanas.map((sem) => {
+            const count = transports.filter(t => t.semana === sem).length;
+            const weekPallets = transports
+              .filter(t => t.semana === sem)
+              .reduce((a, b) => a + (b.cantidad_pallet || 0), 0);
+            const isCurrent = activeSemanaTab === sem;
+
+            return (
+              <button
+                key={sem}
+                onClick={() => setActiveSemanaTab(sem)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 cursor-pointer shadow-xs ${
+                  isCurrent
+                    ? "bg-[#0a5c36] text-white shadow-emerald-950/20"
+                    : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                }`}
+              >
+                <span>{sem}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                  isCurrent ? "bg-white/20 text-white" : "bg-emerald-50 text-[#0a5c36] border border-emerald-200"
+                }`}>
+                  {count} doc{count !== 1 ? 's' : ''} ({weekPallets} PLT)
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Botón para añadir una nueva semana */}
+          {showAddWeekInput ? (
+            <form onSubmit={handleCreateWeek} className="inline-flex items-center space-x-1 shrink-0">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Ej. Semana 38"
+                value={newWeekName}
+                onChange={(e) => setNewWeekName(e.target.value)}
+                className="bg-white border border-[#0a5c36] text-xs rounded-xl px-2.5 py-1.5 text-slate-800 focus:outline-none w-28 shadow-xs"
+              />
+              <button
+                type="submit"
+                className="px-2 py-1.5 bg-[#0a5c36] text-white rounded-xl text-xs font-bold hover:bg-[#08482a]"
+              >
+                OK
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddWeekInput(false)}
+                className="px-2 py-1.5 bg-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-300"
+              >
+                ✕
+              </button>
+            </form>
+          ) : (
+            <button
+              onClick={() => setShowAddWeekInput(true)}
+              className="px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0a5c36] hover:bg-emerald-50 border border-dashed border-slate-300 transition-all flex items-center space-x-1 shrink-0 cursor-pointer"
+              title="Añadir una nueva semana de despacho"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nueva Semana</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Tabla de Resumen */}
-      <div className="overflow-x-auto mt-4">
+      {/* 2. Banner de Métricas de la Semana Seleccionada */}
+      <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center text-[#0a5c36]">
+              <Truck className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {activeSemanaTab === "TODAS" ? "Total Despachos" : `Despachos ${activeSemanaTab}`}
+              </p>
+              <p className="text-sm font-black text-slate-800">
+                {currentMetrics.totalDocs} Documentos
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-800">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pallets Totales</p>
+              <p className="text-sm font-black text-amber-900">
+                {currentMetrics.totalPallets} PLT
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-800">
+              <PackageCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cajas Prep. / Pedido</p>
+              <p className="text-sm font-black text-slate-800">
+                <span className="text-[#0a5c36]">{currentMetrics.totalCajasPrep}</span>
+                <span className="text-slate-400"> / {currentMetrics.totalCajasPed}</span>
+                <span className="text-xs text-slate-500 font-semibold ml-1.5">
+                  ({currentMetrics.prepPercent}%)
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {currentMetrics.diffCount > 0 ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-700">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Diferencias</p>
+                <p className="text-sm font-black text-rose-700">
+                  {currentMetrics.diffCount} SKUs
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center text-[#0a5c36]">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</p>
+                <p className="text-sm font-black text-[#0a5c36]">
+                  100% Preparado
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Botón Exportar Semana */}
+        {activeSemanaTab !== "TODAS" && (
+          <button
+            onClick={() => onExportWeekExcel && onExportWeekExcel(activeSemanaTab)}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-[#0a5c36] border border-slate-300 hover:border-emerald-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            title={`Exportar Excel de ${activeSemanaTab}`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-[#0a5c36]" />
+            <span>Exportar {activeSemanaTab} (.xlsx)</span>
+          </button>
+        )}
+      </div>
+
+      {/* 3. Tabla de Despachos */}
+      <div className="overflow-x-auto p-4">
         {filteredTransports.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
             <Truck className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-            <p className="font-semibold text-slate-700">No hay despachos registrados para esta selección.</p>
-            <p className="text-xs text-slate-500 mt-1">Haz clic en "Conectar SAP" o "Pegar Datos" para agregar uno.</p>
+            <p className="font-semibold text-slate-700">
+              No hay documentos de transporte registrados en {activeSemanaTab === "TODAS" ? "el sistema" : activeSemanaTab}.
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Haz clic en "Conectar SAP" o "Pegar Datos" para cargar despachos en esta semana.
+            </p>
           </div>
         ) : (
           <table className="w-full text-left border-collapse text-xs">
@@ -154,15 +360,18 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                     }`}
                     onClick={() => onSelectTransport(t.id)}
                   >
-                    {/* 1. Semana */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <input
-                        type="text"
+                    {/* 1. Selector / Editor de Semana en fila */}
+                    <td className="py-3.5 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <select
                         value={t.semana}
-                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => onUpdateSummary(t.id, { semana: e.target.value })}
-                        className="bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 text-xs font-semibold focus:border-[#0a5c36] focus:outline-none w-24 shadow-xs"
-                      />
+                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 text-xs font-bold focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
+                        title="Cambiar la semana de este transporte"
+                      >
+                        {allSemanas.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
                     </td>
 
                     {/* 2. Cliente */}

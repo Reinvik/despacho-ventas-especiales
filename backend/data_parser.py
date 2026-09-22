@@ -143,6 +143,8 @@ def parse_vl06o_raw_text(
                 col_map["entrega"] = idx
             elif "posición" in c_low or "posicion" in c_low:
                 col_map["posicion"] = idx
+            elif "transporte" in c_low or "tknum" in c_low or "doc. trans" in c_low or "n° trans" in c_low:
+                col_map["transporte"] = idx
             elif "peso" in c_low:
                 col_map["peso"] = idx
             elif "volumen" in c_low:
@@ -201,6 +203,10 @@ def parse_vl06o_raw_text(
         has_diff = "Si" if diff != 0 else "No"
         status = "Listo" if diff == 0 else ("Pendiente" if qty_prep == 0 else "Parcial")
 
+        row_tknum = get_col("transporte") or transport_doc
+        if len(row_tknum) < 3 and transport_doc:
+            row_tknum = transport_doc
+
         item = TransportItem(
             sku=sku,
             descripcion=desc,
@@ -209,7 +215,7 @@ def parse_vl06o_raw_text(
             cantidad_preparada=qty_prep,
             diferencia_preparacion=diff,
             cliente=cliente_row,
-            documento_transporte=transport_doc,
+            documento_transporte=row_tknum,
             fecha=fecha_fmt,
             tiene_diferencias=has_diff,
             status=status,

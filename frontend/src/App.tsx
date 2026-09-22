@@ -69,14 +69,21 @@ export const App: React.FC = () => {
     const res = await api.extractFromSap(data);
     showNotification(res.message, 'success');
     await refreshData();
-    setSelectedId(res.data.id);
+    if (res.data?.id) {
+      setSelectedId(res.data.id);
+    }
   };
 
   const handleParseRaw = async (data: any) => {
-    const res = await api.parseRawData(data);
-    showNotification(`Transporte ${res.numero_transporte} cargado exitosamente (${res.total_skus} ítems)`, 'success');
+    const list = await api.parseRawData(data);
+    if (list.length === 1) {
+      showNotification(`Transporte ${list[0].numero_transporte} cargado exitosamente (${list[0].total_skus} ítems)`, 'success');
+      setSelectedId(list[0].id);
+    } else {
+      showNotification(`Se cargaron ${list.length} documentos de transporte exitosamente`, 'success');
+      if (list.length > 0) setSelectedId(list[0].id);
+    }
     await refreshData();
-    setSelectedId(res.id);
   };
 
   const handleSeedSample = async () => {
@@ -153,6 +160,16 @@ export const App: React.FC = () => {
     showNotification('Excel consolidado descargado exitosamente');
   };
 
+  const handleExportWeekExcel = (semana: string) => {
+    const weekList = transports.filter(t => t.semana.toLowerCase() === semana.toLowerCase());
+    if (weekList.length === 0) {
+      showNotification(`No hay transportes registrados en ${semana}`, 'error');
+      return;
+    }
+    api.exportExcelWeek(transports, semana);
+    showNotification(`Excel descargado para ${semana} (${weekList.length} transportes)`);
+  };
+
   const selectedTransport = transports.find(t => t.id === selectedId);
 
   return (
@@ -202,6 +219,7 @@ export const App: React.FC = () => {
           onUpdateSummary={handleUpdateSummary}
           onDeleteTransport={handleDeleteTransport}
           onExportExcel={handleExportSingleExcel}
+          onExportWeekExcel={handleExportWeekExcel}
         />
 
         {/* Matriz Detalle por SKU (Si hay transporte seleccionado) */}

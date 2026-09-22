@@ -6,13 +6,14 @@
 
 Option Explicit
 
-Dim tknum
-tknum = InputBox("CIAL ALIMENTOS — CONTROL DESPACHO" & vbCrLf & vbCrLf & _
-                 "Ingrese el Documento de Transporte SAP (TKNUM):" & vbCrLf & _
-                 "Se conectará a SAP GUI, extraerá el picking VL06O y lo cargará en la web.", _
-                 "Nexus Despacho CIAL", "3417089")
+Dim rawInput
+rawInput = InputBox("CIAL ALIMENTOS — CONTROL DESPACHO" & vbCrLf & vbCrLf & _
+                    "Ingrese el o los Documentos de Transporte SAP (TKNUM):" & vbCrLf & _
+                    "(Puede ingresar varios separados por coma o espacio, ej: 3417089, 3417090)" & vbCrLf & vbCrLf & _
+                    "Se conectará a SAP GUI, extraerá el picking VL06O de cada uno y los cargará en la web.", _
+                    "Nexus Despacho CIAL", "3417089")
 
-If Trim(tknum) = "" Then WScript.Quit
+If Trim(rawInput) = "" Then WScript.Quit
 
 Dim fso, shell, tempFolder, userDocs, userDesktop, userDownloads, sapDocFolder
 Set fso = CreateObject("Scripting.FileSystemObject")
@@ -23,10 +24,6 @@ userDocs = shell.SpecialFolders("MyDocuments")
 userDesktop = shell.SpecialFolders("Desktop")
 userDownloads = shell.ExpandEnvironmentStrings("%USERPROFILE%") & "\Downloads"
 sapDocFolder = userDocs & "\SAP\SAP GUI"
-
-Dim exportFileName, scriptStartTime
-exportFileName = "dve_vl06o_" & tknum
-scriptStartTime = Now
 
 ' 1. Conectar con SAP GUI
 On Error Resume Next
@@ -61,87 +58,99 @@ End If
 Set session = connection.Children(0)
 On Error Goto 0
 
-' 2. Ejecutar Transacción VL06O
-session.findById("wnd[0]").maximize
-session.findById("wnd[0]/tbar[0]/okcd").Text = "/nvl06o"
-session.findById("wnd[0]").sendVKey 0
-WScript.Sleep 800
+' Normalizar lista de transportes
+Dim cleanTkInput, tkArr, i, tknum, successCount, totalCount
+cleanTkInput = Replace(rawInput, ",", " ")
+cleanTkInput = Replace(cleanTkInput, ";", " ")
+cleanTkInput = Replace(cleanTkInput, vbTab, " ")
+Do While InStr(cleanTkInput, "  ") > 0
+    cleanTkInput = Replace(cleanTkInput, "  ", " ")
+Loop
+cleanTkInput = Trim(cleanTkInput)
 
-' Presionar botón 6 (Para picking)
-session.findById("wnd[0]/usr/btnBUTTON6").press
-WScript.Sleep 500
+tkArr = Split(cleanTkInput, " ")
+successCount = 0
+totalCount = UBound(tkArr) - LBound(tkArr) + 1
 
-' Limpiar fechas y asignar transporte
-session.findById("wnd[0]/usr/ctxtIT_WADAT-LOW").Text = ""
-session.findById("wnd[0]/usr/ctxtIT_WADAT-HIGH").Text = ""
-session.findById("wnd[0]/usr/ctxtIT_TKNUM-LOW").Text = tknum
-session.findById("wnd[0]/usr/ctxtIT_TKNUM-LOW").setFocus
-session.findById("wnd[0]/usr/ctxtIT_TKNUM-LOW").caretPosition = 7
-session.findById("wnd[0]/tbar[1]/btn[8]").press
-WScript.Sleep 1800
+For i = LBound(tkArr) To UBound(tkArr)
+    tknum = Trim(tkArr(i))
+    If tknum <> "" Then
+        Dim exportFileName, scriptStartTime
+        exportFileName = "dve_vl06o_" & tknum
+        scriptStartTime = Now
 
-' 3. Exportar lista
-session.findById("wnd[0]/tbar[1]/btn[18]").press
-WScript.Sleep 500
+        ' 2. Ejecutar Transacción VL06O para este transporte
+        session.findById("wnd[0]").maximize
+        session.findById("wnd[0]/tbar[0]/okcd").Text = "/nvl06o"
+        session.findById("wnd[0]").sendVKey 0
+        WScript.Sleep 600
 
-session.findById("wnd[0]/mbar/menu[0]/menu[4]/menu[1]").Select
-WScript.Sleep 700
+        ' Presionar botón 6 (Para picking)
+        session.findById("wnd[0]/usr/btnBUTTON6").press
+        WScript.Sleep 400
 
-' Asignar nombre de exportación
-On Error Resume Next
-session.findById("wnd[1]/usr/ssubSUB_CONFIGURATION:SAPLSALV_GUI_CUL_EXPORT_AS:0512/txtGS_EXPORT-FILE_NAME").Text = exportFileName & ".txt"
-session.findById("wnd[1]/tbar[0]/btn[20]").press
-WScript.Sleep 500
-session.findById("wnd[1]/tbar[0]/btn[0]").press
-WScript.Sleep 500
-On Error Goto 0
+        ' Limpiar fechas y asignar transporte
+        session.findById("wnd[0]/usr/ctxtIT_WADAT-LOW").Text = ""
+        session.findById("wnd[0]/usr/ctxtIT_WADAT-HIGH").Text = ""
+        session.findById("wnd[0]/usr/ctxtIT_TKNUM-LOW").Text = tknum
+        session.findById("wnd[0]/usr/ctxtIT_TKNUM-LOW").setFocus
+        session.findById("wnd[0]/usr/ctxtIT_TKNUM-LOW").caretPosition = Len(tknum)
+        session.findById("wnd[0]/tbar[1]/btn[8]").press
+        WScript.Sleep 1500
 
-' 4. Búsqueda y Espera Inteligente del Archivo Descargado (Polling)
-Dim foundPath, rawData
-foundPath = WaitForExportedFile(exportFileName, scriptStartTime, 30)
+        ' 3. Exportar lista
+        session.findById("wnd[0]/tbar[1]/btn[18]").press
+        WScript.Sleep 400
 
-If foundPath = "" Then
-    ' Segundo intento: preguntar al usuario si SAP descargó con otro nombre
-    MsgBox "La transacción se ejecutó en SAP pero el archivo tardó en responder." & vbCrLf & vbCrLf & _
-           "Puedes copiar la tabla directamente en SAP (Ctrl+Y, Ctrl+C)" & vbCrLf & _
-           "y presionar 'Pegar Datos' en la web.", vbInformation, "Nexus Despacho CIAL"
-    shell.Run "https://dve.nexusnetwork.cl"
-    WScript.Quit 0
-End If
+        session.findById("wnd[0]/mbar/menu[0]/menu[4]/menu[1]").Select
+        WScript.Sleep 600
 
-' 5. Leer el archivo esperando que se libere el bloqueo de SAP/Excel
-rawData = ReadFileSafely(foundPath, 15)
+        ' Asignar nombre de exportación
+        On Error Resume Next
+        session.findById("wnd[1]/usr/ssubSUB_CONFIGURATION:SAPLSALV_GUI_CUL_EXPORT_AS:0512/txtGS_EXPORT-FILE_NAME").Text = exportFileName & ".txt"
+        session.findById("wnd[1]/tbar[0]/btn[20]").press
+        WScript.Sleep 400
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        WScript.Sleep 400
+        On Error Goto 0
 
-If Trim(rawData) = "" Then
-    MsgBox "El archivo exportado de SAP está vacío o aún no termina de escribirse.", vbExclamation, "Archivo Vacío"
-    shell.Run "https://dve.nexusnetwork.cl"
-    WScript.Quit 0
-End If
+        ' 4. Espera del Archivo Descargado
+        Dim foundPath, rawData
+        foundPath = WaitForExportedFile(exportFileName, scriptStartTime, 25)
 
-' 6. Enviar datos a https://dve.nexusnetwork.cl
-Dim cleanData, http, payload
-cleanData = Replace(rawData, "\", "\\")
-cleanData = Replace(cleanData, """", "\""")
-cleanData = Replace(cleanData, vbCrLf, "\n")
-cleanData = Replace(cleanData, vbCr, "\n")
-cleanData = Replace(cleanData, vbLf, "\n")
-cleanData = Replace(cleanData, vbTab, "\t")
+        If foundPath <> "" Then
+            rawData = ReadFileSafely(foundPath, 12)
+            If Trim(rawData) <> "" Then
+                Dim cleanData, http, payload
+                cleanData = Replace(rawData, "\", "\\")
+                cleanData = Replace(cleanData, """", "\""")
+                cleanData = Replace(cleanData, vbCrLf, "\n")
+                cleanData = Replace(cleanData, vbCr, "\n")
+                cleanData = Replace(cleanData, vbLf, "\n")
+                cleanData = Replace(cleanData, vbTab, "\t")
 
-Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
-http.Open "POST", "https://dve.nexusnetwork.cl/api/transports/parse-raw", False
-http.setRequestHeader "Content-Type", "application/json"
+                Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+                http.Open "POST", "https://dve.nexusnetwork.cl/api/transports/parse-raw", False
+                http.setRequestHeader "Content-Type", "application/json"
+                payload = "{""raw_text"": """ & cleanData & """, ""documento_transporte"": """ & tknum & """}"
+                http.Send payload
 
-payload = "{""raw_text"": """ & cleanData & """, ""documento_transporte"": """ & tknum & """}"
-http.Send payload
+                If http.Status = 200 Then
+                    successCount = successCount + 1
+                End If
+            End If
+        End If
+    End If
+Next
 
-If http.Status = 200 Then
+If successCount > 0 Then
     MsgBox "CIAL ALIMENTOS — NEXUS DESPACHO" & vbCrLf & vbCrLf & _
-           "¡Transporte " & tknum & " extraído con éxito desde SAP!" & vbCrLf & _
-           "Archivo detectado: " & fso.GetFileName(foundPath) & vbCrLf & vbCrLf & _
+           "¡Extracción finalizada con éxito!" & vbCrLf & _
+           "Transportes procesados: " & successCount & " de " & totalCount & vbCrLf & vbCrLf & _
            "Se abrirá la aplicación web en tu navegador.", vbInformation, "Extracción Exitosa"
     shell.Run "https://dve.nexusnetwork.cl"
 Else
-    MsgBox "Datos extraídos de SAP. Abriendo Nexus Despacho...", vbInformation, "Nexus Despacho CIAL"
+    MsgBox "Se ejecutó la consulta en SAP. Abriendo Nexus Despacho...", vbInformation, "Nexus Despacho CIAL"
     shell.Run "https://dve.nexusnetwork.cl"
 End If
 

@@ -2,7 +2,7 @@
 // Maneja todas las rutas /api/* en Vercel
 
 let memoryTransports = {};
-const deletedTransports = new Set(["3417089"]);
+const deletedTransports = new Set();
 
 const SAMPLE_RAW_DATA = `Entrega\tPosición\tDestinatario mcía.\tMaterial\tMuelle p.núm.almacén\tCantidad entrega\tUn.medida venta\tFecha puesta dis.Mat\tPeso total\tUnidad de peso\tVolumen\tUnidad de volumen\tDescripción posición\tRuta\tCanal distribución\tDocumento compras\tFecha salida mcías.\tNombre solicitante\tSolicitante\tEstado de picking\tClase de entrega\tAutor
 507102148\t10\t52847\t3071\t\t3\tCJ\t02-09-2026\t5,190\tKG\t9.967,770\tCM3\tPATE TERNERA 160 Gr.(x10)\tSTIAGO\tMY\t5045828999\t01-09-2026\tCOMERCIAL DOLLINCO S.A.\t52847\tC\tZSTD\tSLARAB
@@ -116,10 +116,19 @@ function parseVl06oNode(rawText, transportDoc = "3417089", clienteOverride, sema
         if (!("fecha" in colMap)) colMap["fecha"] = idx;
       } else if (c.includes("entrega")) colMap["entrega"] = idx;
       else if (c.includes("posición") || c.includes("posicion")) colMap["posicion"] = idx;
+      else if (c.includes("transporte") || c.includes("tknum") || c.includes("doc. trans") || c.includes("n° trans")) {
+        colMap["transporte"] = idx;
+      }
     });
   } else {
     Object.assign(colMap, { entrega: 0, posicion: 1, sku: 3, cantidad: 5, umv: 6, fecha: 7, descripcion: 12, cliente: 17 });
   }
+
+  const inputTknums = String(transportDoc || "")
+    .split(/[,;\s]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  const defaultTknum = inputTknums[0] || "3417089";
 
   const items = [];
   let detectedClient = clienteOverride || "";
@@ -142,6 +151,11 @@ function parseVl06oNode(rawText, transportDoc = "3417089", clienteOverride, sema
     const qtyPrep = qtyPed;
     const diff = qtyPed - qtyPrep;
 
+    let rowTknum = getCol("transporte") || defaultTknum;
+    if (rowTknum.length < 3 && defaultTknum) {
+      rowTknum = defaultTknum;
+    }
+
     items.push({
       sku,
       descripcion: desc,
@@ -150,7 +164,7 @@ function parseVl06oNode(rawText, transportDoc = "3417089", clienteOverride, sema
       cantidad_preparada: qtyPrep,
       diferencia_preparacion: diff,
       cliente: cliRow,
-      documento_transporte: transportDoc,
+      documento_transporte: rowTknum,
       fecha: fechaFmt,
       tiene_diferencias: diff !== 0 ? "Si" : "No",
       status: diff === 0 ? "Listo" : "Pendiente",
@@ -159,25 +173,42 @@ function parseVl06oNode(rawText, transportDoc = "3417089", clienteOverride, sema
     });
   }
 
-  const totalPed = items.reduce((a, b) => a + b.cantidad_pedido, 0);
-  const totalPrep = items.reduce((a, b) => a + b.cantidad_preparada, 0);
-  const diffCount = items.filter(i => i.tiene_diferencias === "Si").length;
+  if (items.length === 0) {
+    throw new Error("No se encontraron productos válidos en el texto ingresado.");
+  }
 
-  return {
-    id: transportDoc,
-    semana: semanaOverride || "Semana 36",
-    cliente: clienteOverride || detectedClient || "COMERCIAL DOLLINCO S.A.",
-    numero_transporte: transportDoc,
-    cantidad_pallet: cantidadPallet,
-    preparado: diffCount === 0 ? "Listo" : "Con Diferencias",
-    despachado: "Pendiente",
-    fase_global: "En Preparación",
-    total_cajas_pedido: totalPed,
-    total_cajas_preparadas: totalPrep,
-    total_skus: items.length,
-    skus_con_diferencia: diffCount,
-    items
-  };
+  // Agrupar items por número de transporte
+  const groupedByTknum = {};
+  for (const item of items) {
+    const doc = item.documento_transporte || defaultTknum;
+    if (!groupedByTknum[doc]) groupedByTknum[doc] = [];
+    groupedByTknum[doc].push(item);
+  }
+
+  const summaries = Object.entries(groupedByTknum).map(([doc, docItems]) => {
+    const totalPed = docItems.reduce((a, b) => a + b.cantidad_pedido, 0);
+    const totalPrep = docItems.reduce((a, b) => a + b.cantidad_preparada, 0);
+    const diffCount = docItems.filter(i => i.tiene_diferencias === "Si").length;
+    const clientForDoc = docItems.find(i => i.cliente)?.cliente || clienteOverride || detectedClient || "COMERCIAL DOLLINCO S.A.";
+
+    return {
+      id: doc,
+      semana: semanaOverride || "Semana 36",
+      cliente: clientForDoc,
+      numero_transporte: doc,
+      cantidad_pallet: cantidadPallet,
+      preparado: diffCount === 0 ? "Listo" : "Con Diferencias",
+      despachado: "Pendiente",
+      fase_global: "En Preparación",
+      total_cajas_pedido: totalPed,
+      total_cajas_preparadas: totalPrep,
+      total_skus: docItems.length,
+      skus_con_diferencia: diffCount,
+      items: docItems
+    };
+  });
+
+  return summaries;
 }
 
 function initMemoryWithSample(force = false) {
@@ -262,16 +293,18 @@ export default async function handler(req, res) {
   // 4. POST /transports/parse-raw
   if ((route === '/transports/parse-raw' || route.includes('parse-raw')) && req.method === 'POST') {
     try {
-      const summary = parseVl06oNode(
+      const summaries = parseVl06oNode(
         body.raw_text || "",
         body.documento_transporte || "3417089",
         body.cliente_override,
         body.semana_override,
         body.cantidad_pallet || 1
       );
-      deletedTransports.delete(summary.id);
-      memoryTransports[summary.id] = summary;
-      return res.status(200).json(summary);
+      for (const summary of summaries) {
+        deletedTransports.delete(summary.id);
+        memoryTransports[summary.id] = summary;
+      }
+      return res.status(200).json(summaries.length === 1 ? summaries[0] : summaries);
     } catch (e) {
       return res.status(400).json({ detail: e.message || "Error al procesar datos crudos" });
     }

@@ -1,7 +1,10 @@
 import * as XLSX from 'xlsx';
 import { TransportSummary } from '../types';
 
-export const exportTransportToExcelClient = (summaryList: TransportSummary | TransportSummary[]) => {
+export const exportTransportToExcelClient = (
+  summaryList: TransportSummary | TransportSummary[],
+  label?: string
+) => {
   const summaries = Array.isArray(summaryList) ? summaryList : [summaryList];
 
   const wb = XLSX.utils.book_new();
@@ -54,7 +57,8 @@ export const exportTransportToExcelClient = (summaryList: TransportSummary | Tra
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const timestamp = `${year}${month}${day} ${hours}${minutes}`;
 
-  const filename = `${timestamp}.xlsx`;
+  const cleanLabel = label ? ` - ${label.replace(/[/\\?%*:|"<>]/g, '_')}` : '';
+  const filename = `${timestamp}${cleanLabel}.xlsx`;
 
   XLSX.writeFile(wb, filename);
 };

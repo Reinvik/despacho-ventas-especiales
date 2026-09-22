@@ -12,8 +12,7 @@ export const localDb = {
         return JSON.parse(data);
       }
     } catch (e) {}
-    // Por defecto marcar 3417089 como eliminado para asegurar que no reaparezca
-    return ['3417089'];
+    return [];
   },
 
   markDeleted(id: string) {
@@ -42,19 +41,30 @@ export const localDb = {
         return parsed.filter(t => !deletedIds.includes(t.id));
       }
     } catch (e) {}
-    // Si está eliminado 3417089, no sembrar y devolver lista vacía
-    if (deletedIds.includes('3417089')) {
-      localDb.saveAll([]);
-      return [];
+
+    // Si aún no hay nada en storage y no se ha eliminado el ejemplo, sembrar ejemplo
+    if (!deletedIds.includes('3417089')) {
+      const initial = [getClientSampleSummary()];
+      localDb.saveAll(initial);
+      return initial;
     }
-    const initial = [getClientSampleSummary()];
-    localDb.saveAll(initial);
-    return initial;
+    return [];
   },
 
   get(id: string): TransportSummary | undefined {
     const list = localDb.list();
     return list.find(t => t.id === id);
+  },
+
+  getBySemana(semana: string): TransportSummary[] {
+    const list = localDb.list();
+    return list.filter(t => t.semana.toLowerCase() === semana.toLowerCase());
+  },
+
+  getSemanas(): string[] {
+    const list = localDb.list();
+    const set = new Set(list.map(t => t.semana));
+    return Array.from(set).sort();
   },
 
   save(summary: TransportSummary) {
@@ -65,6 +75,21 @@ export const localDb = {
       list[idx] = summary;
     } else {
       list.unshift(summary);
+    }
+    localDb.saveAll(list);
+  },
+
+  saveMany(summaries: TransportSummary[]) {
+    if (!summaries || summaries.length === 0) return;
+    const list = localDb.list();
+    for (const summary of summaries) {
+      localDb.unmarkDeleted(summary.id);
+      const idx = list.findIndex(t => t.id === summary.id);
+      if (idx >= 0) {
+        list[idx] = summary;
+      } else {
+        list.unshift(summary);
+      }
     }
     localDb.saveAll(list);
   },

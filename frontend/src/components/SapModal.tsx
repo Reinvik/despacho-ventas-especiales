@@ -143,17 +143,27 @@ export const SapModal: React.FC<SapModalProps> = ({
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Documento de Transporte (IT_TKNUM-LOW) *
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700">
+                Documento(s) de Transporte SAP (IT_TKNUM) *
+              </label>
+              {tknum.split(/[,;\s]+/).filter(Boolean).length > 1 && (
+                <span className="text-[10px] bg-emerald-100 text-[#0a5c36] font-bold px-2 py-0.5 rounded-full">
+                  {tknum.split(/[,;\s]+/).filter(Boolean).length} transportes en cola
+                </span>
+              )}
+            </div>
             <input
               type="text"
               required
-              placeholder="Ej. 3417089"
+              placeholder="Ej. 3417089 o varios: 3417089, 3417090"
               value={tknum}
               onChange={(e) => setTknum(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 font-mono text-sm focus:border-[#0a5c36] focus:bg-white focus:outline-none transition-all shadow-xs font-bold"
             />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Puedes ingresar varios separados por coma o espacio para consultar y cargar múltiples documentos.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

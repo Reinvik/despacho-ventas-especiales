@@ -100,16 +100,24 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Documento Transporte (TKNUM)
-              </label>
+            <div className="sm:col-span-1">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  N° Transporte(s)
+                </label>
+                {tknum.split(/[,;\s]+/).filter(Boolean).length > 1 && (
+                  <span className="text-[10px] bg-emerald-100 text-[#0a5c36] font-bold px-1.5 py-0.2 rounded-full">
+                    {tknum.split(/[,;\s]+/).filter(Boolean).length} docs
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
-                placeholder="3417089"
+                placeholder="Ej. 3417089, 3417090"
                 value={tknum}
                 onChange={(e) => setTknum(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-bold"
+                title="Puedes ingresar uno o varios documentos de transporte separados por coma o espacio"
               />
             </div>
 
@@ -128,7 +136,7 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Cantidad Pallets
+                Cantidad Pallets (por doc)
               </label>
               <input
                 type="number"
