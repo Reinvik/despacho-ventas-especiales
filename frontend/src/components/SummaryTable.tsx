@@ -36,19 +36,6 @@ const FASE_GLOBAL_OPTIONS = [
   { value: "Despachado", label: "🟢 Despachado", bg: "bg-emerald-950/40 text-emerald-300 border-emerald-800/60" }
 ];
 
-const PREPARADO_OPTIONS = [
-  { value: "Pendiente", label: "Pendiente", color: "text-amber-400 bg-amber-950/50 border-amber-800/60" },
-  { value: "En Preparación", label: "En Preparación", color: "text-orange-400 bg-orange-950/50 border-orange-800/60" },
-  { value: "Listo", label: "Listo (100%)", color: "text-emerald-400 bg-emerald-950/50 border-emerald-800/60" },
-  { value: "Con Diferencias", label: "Con Diferencias", color: "text-rose-400 bg-rose-950/50 border-rose-800/60" }
-];
-
-const DESPACHADO_OPTIONS = [
-  { value: "Pendiente", label: "No Despachado", color: "text-slate-400 bg-slate-900 border-slate-700" },
-  { value: "En Andén", label: "En Andén / Carga", color: "text-purple-400 bg-purple-950/50 border-purple-800/60" },
-  { value: "Despachado", label: "Despachado (Camión)", color: "text-emerald-400 bg-emerald-950/50 border-emerald-800/60" }
-];
-
 export const SummaryTable: React.FC<SummaryTableProps> = ({
   transports,
   selectedTransportId,
@@ -337,8 +324,6 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                 <th className="py-3 px-3">Cliente</th>
                 <th className="py-3 px-3">N° Transporte</th>
                 <th className="py-3 px-3 text-center">Cant. Pallets</th>
-                <th className="py-3 px-3">Fase Preparado</th>
-                <th className="py-3 px-3">Fase Despachado</th>
                 <th className="py-3 px-3">Fase Global</th>
                 <th className="py-3 px-3 text-center">Cajas (Prep/Ped)</th>
                 <th className="py-3 px-3 text-center">Diferencias</th>
@@ -401,37 +386,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                       </div>
                     </td>
 
-                    {/* 5. Fase Preparado (Editable) */}
-                    <td className="py-3.5 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={t.preparado}
-                        onChange={(e) => onUpdateSummary(t.id, { preparado: e.target.value })}
-                        className="bg-white border border-slate-200 text-xs rounded-lg px-2 py-1 text-slate-800 font-medium focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
-                      >
-                        {PREPARADO_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-
-                    {/* 6. Fase Despachado (Editable) */}
-                    <td className="py-3.5 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={t.despachado}
-                        onChange={(e) => onUpdateSummary(t.id, { despachado: e.target.value })}
-                        className="bg-white border border-slate-200 text-xs rounded-lg px-2 py-1 text-slate-800 font-medium focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
-                      >
-                        {DESPACHADO_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-
-                    {/* 7. Fase Global (Pipeline) */}
+                    {/* 5. Fase Global (Pipeline) */}
                     <td className="py-3.5 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={t.fase_global}
