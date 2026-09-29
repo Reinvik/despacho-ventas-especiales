@@ -17,6 +17,17 @@ async function checkLocalAgent(): Promise<boolean> {
   }
 }
 
+function mergeTransports(localList: TransportSummary[], remoteList: TransportSummary[]): TransportSummary[] {
+  const map = new Map<string, TransportSummary>();
+  for (const item of localList) {
+    if (item && item.id) map.set(item.id, item);
+  }
+  for (const item of remoteList) {
+    if (item && item.id) map.set(item.id, item);
+  }
+  return Array.from(map.values());
+}
+
 export const api = {
   async getStatus(): Promise<SapStatusResponse> {
     // 1. Intentar agente local de Windows
@@ -65,10 +76,25 @@ export const api = {
     };
   },
 
+  async syncToCloud(transports: TransportSummary[]): Promise<void> {
+    if (!transports || transports.length === 0) return;
+    try {
+      await fetch(`${CLOUD_BASE}/transports/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transports),
+        signal: AbortSignal.timeout(4000)
+      });
+    } catch (e) {
+      console.warn("Fallo syncToCloud:", e);
+    }
+  },
+
   async listTransports(): Promise<TransportSummary[]> {
     const deletedIds = localDb.getDeletedIds();
+    const localList = localDb.list();
 
-    // Intentar agente local primero si está activo
+    // 1. Intentar agente local primero si está activo
     const hasLocal = await checkLocalAgent();
     if (hasLocal) {
       try {
@@ -76,25 +102,39 @@ export const api = {
         if (res.ok) {
           const list: TransportSummary[] = await res.json();
           const filtered = list.filter(t => !deletedIds.includes(t.id));
-          localDb.saveMany(filtered);
-          return filtered;
+          const merged = mergeTransports(localList, filtered);
+          localDb.saveMany(merged);
+          return merged;
         }
       } catch {}
     }
 
-    // Intentar Vercel
+    // 2. Intentar Vercel (conectado permanentemente a Supabase PostgreSQL)
     try {
-      const res = await fetch(`${CLOUD_BASE}/transports`, { signal: AbortSignal.timeout(1500) });
+      const res = await fetch(`${CLOUD_BASE}/transports`, { signal: AbortSignal.timeout(3500) });
       if (res.ok) {
         const list: TransportSummary[] = await res.json();
-        const filtered = list.filter(t => !deletedIds.includes(t.id));
-        localDb.saveMany(filtered);
-        return filtered;
-      }
-    } catch {}
+        const filteredRemote = list.filter(t => !deletedIds.includes(t.id));
 
-    // Fallback localStorage
-    return localDb.list();
+        // Mezclar con cualquier despacho guardado en localStorage:
+        // ¡Garantiza que ningún despacho guardado por el usuario se oculte o se pierda!
+        const merged = mergeTransports(localList, filteredRemote);
+        localDb.saveMany(merged);
+
+        // Si hay elementos locales que no están en la nube (ej: guardados ayer en el navegador), subirlos a Supabase
+        const missingOnRemote = localList.filter(l => !filteredRemote.some(r => r.id === l.id));
+        if (missingOnRemote.length > 0) {
+          api.syncToCloud(missingOnRemote).catch(() => {});
+        }
+
+        return merged;
+      }
+    } catch (e) {
+      console.warn("Error al consultar transportes en la nube:", e);
+    }
+
+    // 3. Fallback: siempre devolver lo que está en localStorage
+    return localList;
   },
 
   async getTransport(id: string): Promise<TransportSummary> {
@@ -107,7 +147,7 @@ export const api = {
     }
 
     try {
-      const res = await fetch(`${CLOUD_BASE}/transports/${id}`, { signal: AbortSignal.timeout(1500) });
+      const res = await fetch(`${CLOUD_BASE}/transports/${id}`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) return await res.json();
     } catch {}
 
@@ -135,7 +175,7 @@ export const api = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(4000)
       });
       if (res.ok) {
         const parsed = await res.json();
@@ -154,6 +194,7 @@ export const api = {
       data.cantidad_pallet || 1
     );
     localDb.saveMany(summaries);
+    api.syncToCloud(summaries).catch(() => {});
     return summaries;
   },
 
@@ -228,7 +269,11 @@ export const api = {
         body: JSON.stringify(updates),
         signal: AbortSignal.timeout(1500)
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        localDb.save(data);
+        return data;
+      }
     } catch {}
 
     return localDb.updateSummary(id, updates);
@@ -250,7 +295,11 @@ export const api = {
         body: JSON.stringify({ sku, cantidad_preparada, posicion }),
         signal: AbortSignal.timeout(1500)
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        localDb.save(data);
+        return data;
+      }
     } catch {}
 
     return localDb.updateItemQuantity(transportId, sku, cantidad_preparada, posicion);
@@ -265,7 +314,11 @@ export const api = {
         method: 'POST',
         signal: AbortSignal.timeout(1500)
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        localDb.save(data);
+        return data;
+      }
     } catch {}
 
     return localDb.prepareAll(transportId, prepareAll);

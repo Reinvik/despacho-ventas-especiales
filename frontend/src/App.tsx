@@ -8,12 +8,26 @@ import { SapModal } from './components/SapModal';
 import { PasteDataModal } from './components/PasteDataModal';
 import { MacroModal } from './components/MacroModal';
 import { api } from './services/api';
+import { localDb } from './services/localStorageDb';
 import { TransportSummary, SapStatusResponse } from './types';
 import { Truck, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [transports, setTransports] = useState<TransportSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [transports, setTransports] = useState<TransportSummary[]>(() => {
+    try {
+      return localDb.list();
+    } catch {
+      return [];
+    }
+  });
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    try {
+      const initial = localDb.list();
+      return initial.length > 0 ? initial[0].id : null;
+    } catch {
+      return null;
+    }
+  });
   const [sapStatus, setSapStatus] = useState<SapStatusResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);

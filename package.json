@@ -1,6 +1,7 @@
 {
   "name": "despacho-ventas-especiales",
   "private": true,
+  "type": "module",
   "version": "1.0.0",
   "description": "Despacho Ventas Especiales — Conexión SAP VL06O, control de pallets, fases y detalle SKU",
   "scripts": {
