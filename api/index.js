@@ -137,6 +137,35 @@ function formatDateShort(dateStr) {
   return dateStr;
 }
 
+function getCurrentWeek(d = new Date()) {
+  try {
+    const date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return `Semana ${weekNum}`;
+  } catch {
+    return "Semana 40";
+  }
+}
+
+function calculateIsoWeek(dateStr) {
+  if (!dateStr || !String(dateStr).trim()) return getCurrentWeek();
+  try {
+    const match = String(dateStr).trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (match) {
+      const d = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+      return getCurrentWeek(d);
+    }
+    const d2 = new Date(dateStr);
+    if (!isNaN(d2.getTime())) {
+      return getCurrentWeek(d2);
+    }
+  } catch (e) {}
+  return getCurrentWeek();
+}
+
 function parseVl06oNode(rawText, transportDoc = "3417089", clienteOverride, semanaOverride, cantidadPallet = 2) {
   const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) throw new Error("Texto vacío");
@@ -246,9 +275,10 @@ function parseVl06oNode(rawText, transportDoc = "3417089", clienteOverride, sema
     const diffCount = docItems.filter(i => i.tiene_diferencias === "Si").length;
     const clientForDoc = docItems.find(i => i.cliente)?.cliente || clienteOverride || detectedClient || "COMERCIAL DOLLINCO S.A.";
 
+    const detectedDate = docItems.find(i => i.fecha)?.fecha;
     return {
       id: doc,
-      semana: semanaOverride || "Semana 36",
+      semana: semanaOverride || calculateIsoWeek(detectedDate),
       cliente: clientForDoc,
       numero_transporte: doc,
       cantidad_pallet: cantidadPallet,

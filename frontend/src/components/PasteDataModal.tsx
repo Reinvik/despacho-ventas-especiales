@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClipboardPaste, X, FileText, Loader2, Sparkles } from 'lucide-react';
+import { getCurrentWeek } from '../services/clientParser';
 
 interface PasteDataModalProps {
   isOpen: boolean;
@@ -20,10 +21,17 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
 }) => {
   const [rawText, setRawText] = useState<string>("");
   const [tknum, setTknum] = useState<string>("3417089");
-  const [semana, setSemana] = useState<string>("Semana 36");
+  const [semana, setSemana] = useState<string>(() => getCurrentWeek());
   const [pallets, setPallets] = useState<number>(2);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSemana(getCurrentWeek());
+      setErrorMsg(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -127,7 +135,7 @@ export const PasteDataModal: React.FC<PasteDataModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="Semana 36"
+                placeholder={getCurrentWeek()}
                 value={semana}
                 onChange={(e) => setSemana(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-medium"

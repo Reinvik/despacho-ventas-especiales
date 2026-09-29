@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zap, X, AlertCircle, CheckCircle2, Loader2, Info, Download } from 'lucide-react';
 import { SapStatusResponse } from '../types';
+import { getCurrentWeek } from '../services/clientParser';
 
 interface SapModalProps {
   isOpen: boolean;
@@ -16,10 +17,17 @@ export const SapModal: React.FC<SapModalProps> = ({
   onExtract
 }) => {
   const [tknum, setTknum] = useState<string>("3417089");
-  const [semana, setSemana] = useState<string>("Semana 36");
+  const [semana, setSemana] = useState<string>(() => getCurrentWeek());
   const [pallets, setPallets] = useState<number>(2);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSemana(getCurrentWeek());
+      setErrorMsg(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -175,7 +183,7 @@ export const SapModal: React.FC<SapModalProps> = ({
                 type="text"
                 value={semana}
                 onChange={(e) => setSemana(e.target.value)}
-                placeholder="Ej. Semana 36"
+                placeholder={`Ej. ${getCurrentWeek()}`}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-xs focus:border-[#0a5c36] focus:bg-white focus:outline-none shadow-xs font-medium"
               />
             </div>

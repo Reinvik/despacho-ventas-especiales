@@ -28,20 +28,35 @@ export function formatDateToShortEs(dateStr: string): string {
   return cleaned;
 }
 
-export function calculateIsoWeek(dateStr: string): string {
+export function getCurrentWeek(d: Date = new Date()): string {
+  try {
+    const date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return `Semana ${weekNum}`;
+  } catch {
+    return "Semana 40";
+  }
+}
+
+export function calculateIsoWeek(dateStr?: string): string {
+  if (!dateStr || !dateStr.trim()) {
+    return getCurrentWeek();
+  }
   try {
     const match = dateStr.trim().match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
     if (match) {
       const d = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-      const date = new Date(d.getTime());
-      date.setHours(0, 0, 0, 0);
-      date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-      const week1 = new Date(date.getFullYear(), 0, 4);
-      const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-      return `Semana ${weekNum}`;
+      return getCurrentWeek(d);
+    }
+    const d2 = new Date(dateStr);
+    if (!isNaN(d2.getTime())) {
+      return getCurrentWeek(d2);
     }
   } catch (e) {}
-  return "Semana 36";
+  return getCurrentWeek();
 }
 
 export function parseNumberClient(val: any): number {

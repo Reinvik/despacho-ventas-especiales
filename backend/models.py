@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from datetime import datetime
 
 class TransportItem(BaseModel):
     sku: str = Field(..., description="Código de material/SKU SAP")
@@ -25,7 +26,7 @@ class TransportItem(BaseModel):
 
 class TransportSummary(BaseModel):
     id: str = Field(..., description="Identificador único (normalmente el número de transporte)")
-    semana: str = Field(default="Semana 36", description="Semana de despacho (ej. Semana 36)")
+    semana: str = Field(default_factory=lambda: f"Semana {datetime.now().isocalendar()[1]}", description="Semana de despacho")
     cliente: str = Field(..., description="Nombre del cliente")
     numero_transporte: str = Field(..., description="Documento de transporte TKNUM")
     cantidad_pallet: int = Field(default=1, description="Cantidad de pallets asignados (editable)")
