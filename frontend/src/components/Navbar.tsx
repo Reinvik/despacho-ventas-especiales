@@ -8,7 +8,8 @@ import {
   Database,
   Cloud,
   Layers,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 import { SapStatusResponse } from '../types';
 
@@ -20,6 +21,8 @@ interface NavbarProps {
   onSeedSample: () => void;
   onExportAll: () => void;
   isLoading: boolean;
+  currentUser?: any;
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -29,7 +32,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenMacroModal,
   onSeedSample,
   onExportAll,
-  isLoading
+  isLoading,
+  currentUser,
+  onLogout
 }) => {
   const isSapActive = sapStatus?.sap_gui.running ?? false;
 
@@ -123,6 +128,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             <FileSpreadsheet className="w-4 h-4" />
             <span className="hidden sm:inline">Excel</span>
           </button>
+
+          {/* Action: Logout */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center space-x-1.5 px-2.5 py-2 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-200 hover:text-white border border-red-500/40 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+              title={currentUser?.email ? `Cerrar Sesión (${currentUser.email})` : 'Cerrar Sesión'}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">{currentUser?.email?.split('@')[0] || 'Salir'}</span>
+            </button>
+          )}
         </div>
 
       </div>

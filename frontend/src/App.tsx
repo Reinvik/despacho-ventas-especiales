@@ -11,8 +11,9 @@ import { api } from './services/api';
 import { localDb } from './services/localStorageDb';
 import { TransportSummary, SapStatusResponse } from './types';
 import { Truck, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { supabase } from './lib/supabase';
 
-export const App: React.FC = () => {
+export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   const [transports, setTransports] = useState<TransportSummary[]>(() => {
     try {
       return localDb.list();
@@ -198,6 +199,8 @@ export const App: React.FC = () => {
         onSeedSample={handleSeedSample}
         onExportAll={handleExportAllExcel}
         isLoading={loading}
+        currentUser={currentUser}
+        onLogout={() => supabase.auth.signOut()}
       />
 
       {/* Subbarra de Marca y Estado SAP CIAL */}
