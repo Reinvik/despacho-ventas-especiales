@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import cialLogo from '../assets/cial-alimentos-logo.png';
-import { Mail, Lock, ArrowRight, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, CheckCircle2, AlertCircle, Eye, EyeOff, X } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
 const ALLOWED_DOMAIN = 'cial.cl';
 
-export default function LoginPage() {
+interface LoginPageProps {
+  onClose?: () => void;
+}
+
+export default function LoginPage({ onClose }: LoginPageProps = {}) {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -142,20 +146,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#0a5c36]">
-      {/* Fondo con gradiente y formas sutiles */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#063d25] via-[#0a5c36] to-[#0d7a49]" />
-        <div className="absolute top-[-120px] right-[-80px] w-[500px] h-[500px] rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute bottom-[-100px] left-[-60px] w-[400px] h-[400px] rounded-full bg-emerald-400/10 blur-3xl" />
-      </div>
+    <div className={onClose 
+      ? "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto select-none"
+      : "min-h-screen flex items-center justify-center relative overflow-hidden bg-[#0a5c36] select-none"
+    }>
+      {/* Fondo con gradiente y formas sutiles (solo en modo full-screen) */}
+      {!onClose && (
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#063d25] via-[#0a5c36] to-[#0d7a49]" />
+          <div className="absolute top-[-120px] right-[-80px] w-[500px] h-[500px] rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute bottom-[-100px] left-[-60px] w-[400px] h-[400px] rounded-full bg-emerald-400/10 blur-3xl" />
+        </div>
+      )}
 
       {/* Card principal */}
       <div className="relative z-10 w-full max-w-md px-4 select-none">
-        <div className="bg-white rounded-3xl shadow-2xl shadow-black/30 border border-white/50 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl shadow-black/40 border border-white/50 overflow-hidden relative">
           
           {/* Header con identidad CIAL */}
           <div className="bg-gradient-to-br from-[#0a5c36] to-[#0d7a49] p-8 text-center relative">
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer z-20"
+                title="Cerrar y continuar en Modo Lectura"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
             <div className="flex items-center justify-center gap-3.5 mb-3">
               <img
                 src={cialLogo}
@@ -437,6 +456,17 @@ export default function LoginPage() {
               </div>
             )}
           </div>
+          {onClose && (
+            <div className="py-3 px-6 bg-slate-50 border-t border-slate-100 text-center">
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-xs text-slate-500 hover:text-slate-800 font-bold transition-colors cursor-pointer"
+              >
+                Continuar en Modo Lectura (sin iniciar sesión) →
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

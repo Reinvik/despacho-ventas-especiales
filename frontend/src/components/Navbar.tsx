@@ -9,7 +9,10 @@ import {
   Cloud,
   Layers,
   Sparkles,
-  LogOut
+  LogOut,
+  LogIn,
+  ShieldCheck,
+  Eye
 } from 'lucide-react';
 import { SapStatusResponse } from '../types';
 
@@ -23,6 +26,8 @@ interface NavbarProps {
   isLoading: boolean;
   currentUser?: any;
   onLogout?: () => void;
+  isReadOnly?: boolean;
+  onOpenLogin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -34,15 +39,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   onExportAll,
   isLoading,
   currentUser,
-  onLogout
+  onLogout,
+  isReadOnly = false,
+  onOpenLogin
 }) => {
-  const isSapActive = sapStatus?.sap_gui.running ?? false;
-
   return (
     <header className="bg-[#0a5c36] text-white shadow-lg shadow-emerald-950/20 select-none shrink-0 sticky top-0 z-40 border-b border-[#08482a] w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3">
         
-        {/* CIAL Alimentos Brand Header (Identical to Nexus Almacenamiento & Nexus Despacho) */}
+        {/* CIAL Alimentos Brand Header */}
         <div className="flex items-center gap-3">
           <img 
             src="/cial-logo.png" 
@@ -50,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="w-11 h-11 sm:w-12 sm:h-12 object-contain bg-white rounded-xl p-1 shadow-md shrink-0 ring-1 ring-white/30" 
           />
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-base sm:text-lg font-black tracking-wider leading-none text-white drop-shadow-sm">
                 NEXUS DESPACHO
               </h1>
@@ -60,6 +65,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-white/10 text-white border border-white/20">
                 VENTAS ESPECIALES
               </span>
+              {isReadOnly && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                  <Eye className="w-3 h-3 text-amber-300" />
+                  <span>Modo Consulta</span>
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] sm:text-[11px] text-emerald-200 font-bold tracking-widest uppercase">
@@ -79,10 +90,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Action: SAP Connect (Vibrant Amber CTA) */}
           <button
-            onClick={onOpenSapModal}
+            onClick={isReadOnly && onOpenLogin ? onOpenLogin : onOpenSapModal}
             disabled={isLoading}
             className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 hover:shadow-amber-500/35 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer"
-            title="Conectar y extraer directamente de SAP GUI (VL06O)"
+            title={isReadOnly ? "Inicia sesión para conectar SAP GUI" : "Conectar y extraer directamente de SAP GUI (VL06O)"}
           >
             <Zap className="w-4 h-4 fill-slate-950" />
             <span>Conectar SAP</span>
@@ -90,9 +101,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Action: Fast Paste */}
           <button
-            onClick={onOpenPasteModal}
+            onClick={isReadOnly && onOpenLogin ? onOpenLogin : onOpenPasteModal}
             disabled={isLoading}
             className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer backdrop-blur-sm"
+            title={isReadOnly ? "Inicia sesión para importar datos" : "Pegar datos copiados desde SAP"}
           >
             <ClipboardPaste className="w-4 h-4 text-emerald-300" />
             <span className="hidden sm:inline">Pegar Datos</span>
@@ -100,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Action: Seed Sample */}
           <button
-            onClick={onSeedSample}
+            onClick={isReadOnly && onOpenLogin ? onOpenLogin : onSeedSample}
             disabled={isLoading}
             title="Cargar ejemplo oficial de transporte 3417089 (Comercial Dollinco)"
             className="flex items-center space-x-1 px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer backdrop-blur-sm"
@@ -118,28 +130,40 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Code className="w-4 h-4 text-emerald-300" />
           </button>
 
-          {/* Action: Export All */}
+          {/* Action: Export All (Siempre disponible para todos) */}
           <button
             onClick={onExportAll}
             disabled={isLoading}
-            title="Descargar reporte Excel consolidado (.xlsx)"
+            title="Descargar reporte Excel consolidado (.xlsx) - Disponible para todos"
             className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-black shadow-md shadow-emerald-900/30 transition-all active:scale-95 cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span className="hidden sm:inline">Excel</span>
           </button>
 
-          {/* Action: Logout */}
-          {onLogout && (
+          {/* Auth State Action: Login / Logout */}
+          {currentUser ? (
+            onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center space-x-1.5 px-2.5 py-2 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-200 hover:text-white border border-red-500/40 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                title={`Cerrar Sesión (${currentUser.email})`}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">{currentUser?.email?.split('@')[0] || 'Salir'}</span>
+              </button>
+            )
+          ) : (
             <button
-              onClick={onLogout}
-              className="flex items-center space-x-1.5 px-2.5 py-2 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-200 hover:text-white border border-red-500/40 text-xs font-bold transition-all active:scale-95 cursor-pointer"
-              title={currentUser?.email ? `Cerrar Sesión (${currentUser.email})` : 'Cerrar Sesión'}
+              onClick={onOpenLogin}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white text-[#0a5c36] hover:bg-emerald-50 text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+              title="Iniciar sesión con cuenta @cial.cl para editar"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">{currentUser?.email?.split('@')[0] || 'Salir'}</span>
+              <LogIn className="w-4 h-4 text-[#0a5c36]" />
+              <span>Iniciar Sesión</span>
             </button>
           )}
+
         </div>
 
       </div>

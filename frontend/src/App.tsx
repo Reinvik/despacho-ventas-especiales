@@ -7,13 +7,17 @@ import { DetailSkuTable } from './components/DetailSkuTable';
 import { SapModal } from './components/SapModal';
 import { PasteDataModal } from './components/PasteDataModal';
 import { MacroModal } from './components/MacroModal';
+import LoginPage from './components/LoginPage';
 import { api } from './services/api';
 import { localDb } from './services/localStorageDb';
 import { TransportSummary, SapStatusResponse } from './types';
-import { Truck, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Truck, CheckCircle2, AlertCircle, Eye, LogIn } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
+  const isReadOnly = !currentUser;
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+
   const [transports, setTransports] = useState<TransportSummary[]>(() => {
     try {
       return localDb.list();
@@ -41,6 +45,15 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const requireAuth = (): boolean => {
+    if (isReadOnly) {
+      setIsLoginModalOpen(true);
+      showNotification('Debes iniciar sesión con tu correo corporativo @cial.cl para realizar modificaciones.', 'error');
+      return false;
+    }
+    return true;
   };
 
   // Cargar estado inicial y transportes
@@ -81,6 +94,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
 
   // Handlers
   const handleExtractSap = async (data: { documento_transporte: string; semana?: string; cantidad_pallet?: number }) => {
+    if (!requireAuth()) return;
     const res = await api.extractFromSap(data);
     showNotification(res.message, 'success');
     await refreshData();
@@ -90,6 +104,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   };
 
   const handleParseRaw = async (data: any) => {
+    if (!requireAuth()) return;
     const list = await api.parseRawData(data);
     if (list.length === 1) {
       showNotification(`Transporte ${list[0].numero_transporte} cargado exitosamente (${list[0].total_skus} ítems)`, 'success');
@@ -102,6 +117,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   };
 
   const handleSeedSample = async () => {
+    if (!requireAuth()) return;
     try {
       setLoading(true);
       const res = await api.seedSample();
@@ -116,6 +132,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   };
 
   const handleUpdateSummary = async (id: string, updates: Partial<TransportSummary>) => {
+    if (!requireAuth()) return;
     try {
       const updated = await api.updateTransportSummary(id, updates);
       setTransports(prev => prev.map(t => t.id === id ? updated : t));
@@ -125,6 +142,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   };
 
   const handleUpdateItemQuantity = async (sku: string, qty: number, posicion?: string) => {
+    if (!requireAuth()) return;
     if (!selectedId) return;
     try {
       const updated = await api.updateItemQuantity(selectedId, sku, qty, posicion);
@@ -135,6 +153,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   };
 
   const handlePrepareAll = async (prepareAll: boolean) => {
+    if (!requireAuth()) return;
     if (!selectedId) return;
     try {
       const updated = await api.prepareAll(selectedId, prepareAll);
@@ -146,6 +165,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
   };
 
   const handleDeleteTransport = async (id: string) => {
+    if (!requireAuth()) return;
     if (!window.confirm(`¿Estás seguro de eliminar el transporte ${id}?`)) return;
     try {
       await api.deleteTransport(id);
@@ -156,6 +176,7 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
     }
   };
 
+  // Exportaciones de Excel (100% disponibles sin login)
   const handleExportSingleExcel = (id: string) => {
     const target = transports.find(t => t.id === id);
     if (!target) {
@@ -193,18 +214,50 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
       {/* Header Corporativo Oficial CIAL Alimentos */}
       <Navbar
         sapStatus={sapStatus}
-        onOpenSapModal={() => setIsSapModalOpen(true)}
-        onOpenPasteModal={() => setIsPasteModalOpen(true)}
+        onOpenSapModal={() => {
+          if (!requireAuth()) return;
+          setIsSapModalOpen(true);
+        }}
+        onOpenPasteModal={() => {
+          if (!requireAuth()) return;
+          setIsPasteModalOpen(true);
+        }}
         onOpenMacroModal={() => setIsMacroModalOpen(true)}
         onSeedSample={handleSeedSample}
         onExportAll={handleExportAllExcel}
         isLoading={loading}
         currentUser={currentUser}
         onLogout={() => supabase.auth.signOut()}
+        isReadOnly={isReadOnly}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
       />
 
       {/* Subbarra de Marca y Estado SAP CIAL */}
       <CialBrandBar sapStatus={sapStatus} />
+
+      {/* Banner de Modo Lectura / Modo Consulta para usuarios no autenticados */}
+      {isReadOnly && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 py-2.5 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 text-xs text-amber-950 font-medium">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </span>
+              <span>
+                <strong className="font-bold text-amber-900">Modo Consulta Activo:</strong> Puedes explorar todos los despachos y <strong className="text-[#0a5c36]">descargar reportes Excel</strong> libremente sin iniciar sesión.
+              </span>
+            </div>
+            <button
+              onClick={() => setIsLoginModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#0a5c36] hover:bg-[#08482a] text-white text-xs font-black shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            >
+              <LogIn className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Iniciar Sesión para Editar</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Notificación flotante */}
       {notification && (
@@ -237,6 +290,8 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
           onDeleteTransport={handleDeleteTransport}
           onExportExcel={handleExportSingleExcel}
           onExportWeekExcel={handleExportWeekExcel}
+          isReadOnly={isReadOnly}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
         />
 
         {/* Matriz Detalle por SKU (Si hay transporte seleccionado) */}
@@ -246,6 +301,8 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
             onUpdateItemQuantity={handleUpdateItemQuantity}
             onPrepareAll={handlePrepareAll}
             onExportExcel={() => handleExportSingleExcel(selectedTransport.id)}
+            isReadOnly={isReadOnly}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
           />
         ) : (
           <div className="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-500 shadow-sm">
@@ -266,7 +323,12 @@ export const App: React.FC<{ currentUser?: any }> = ({ currentUser }) => {
         <p>CIAL Alimentos • San Jorge • La Preferida • Winter — Control Outbound & Despacho Ventas Especiales</p>
       </footer>
 
-      {/* Modales */}
+      {/* Modal de Inicio de Sesión / Registro para Usuarios @cial.cl */}
+      {isLoginModalOpen && (
+        <LoginPage onClose={() => setIsLoginModalOpen(false)} />
+      )}
+
+      {/* Modales de SAP, Pegado y Macro */}
       <SapModal
         isOpen={isSapModalOpen}
         onClose={() => setIsSapModalOpen(false)}

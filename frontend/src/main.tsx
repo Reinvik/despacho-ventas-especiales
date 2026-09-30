@@ -15,10 +15,10 @@ function Root() {
   useEffect(() => {
     let mounted = true;
 
-    // Timeout de seguridad máximo (2.5 s)
+    // Timeout de seguridad máximo (800ms)
     const timer = setTimeout(() => {
       if (mounted) setAuthLoading(false);
-    }, 2500);
+    }, 800);
 
     // Obtener sesión inicial
     supabase.auth.getSession()
@@ -70,7 +70,7 @@ function Root() {
     );
   }
 
-  return user ? <App currentUser={user} /> : <LoginPage />;
+  return <App currentUser={user} />;
 }
 
 createRoot(document.getElementById('root') as HTMLElement).render(

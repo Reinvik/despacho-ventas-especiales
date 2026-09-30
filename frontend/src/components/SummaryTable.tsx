@@ -14,9 +14,14 @@ import {
   Plus,
   PackageCheck,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ArrowUpDown,
+  Lock
 } from 'lucide-react';
 import { TransportSummary } from '../types';
+
+export type SummarySortField = 'semana' | 'cliente' | 'numero_transporte' | 'cantidad_pallet' | 'fase_global' | 'cajas' | 'diferencias';
+export type SortDirection = 'asc' | 'desc';
 
 interface SummaryTableProps {
   transports: TransportSummary[];
@@ -26,6 +31,8 @@ interface SummaryTableProps {
   onDeleteTransport: (id: string) => void;
   onExportExcel: (id: string) => void;
   onExportWeekExcel?: (semana: string) => void;
+  isReadOnly?: boolean;
+  onOpenLogin?: () => void;
 }
 
 const FASE_GLOBAL_OPTIONS = [
@@ -43,13 +50,31 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
   onUpdateSummary,
   onDeleteTransport,
   onExportExcel,
-  onExportWeekExcel
+  onExportWeekExcel,
+  isReadOnly = false,
+  onOpenLogin
 }) => {
   const [activeSemanaTab, setActiveSemanaTab] = useState<string>("TODAS");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showAddWeekInput, setShowAddWeekInput] = useState<boolean>(false);
   const [newWeekName, setNewWeekName] = useState<string>("");
   const [customSemanas, setCustomSemanas] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<SummarySortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (field: SummarySortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else {
+        setSortField(null);
+        setSortDirection('desc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
 
   // Obtener lista completa y ordenada de semanas (extraídas de transportes + personalizadas)
   const allSemanas = useMemo(() => {
@@ -102,6 +127,71 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
     const prepPercent = totalCajasPed > 0 ? Math.round((totalCajasPrep / totalCajasPed) * 100) : 0;
     return { totalDocs, totalPallets, totalCajasPed, totalCajasPrep, diffCount, prepPercent };
   }, [filteredTransports]);
+
+  // Ordenamiento de transportes (soporta de Mayor a Menor o Menor a Mayor)
+  const sortedTransports = useMemo(() => {
+    if (!sortField) return filteredTransports;
+    return [...filteredTransports].sort((a, b) => {
+      let valA: any = 0;
+      let valB: any = 0;
+
+      switch (sortField) {
+        case 'semana':
+          valA = a.semana || '';
+          valB = b.semana || '';
+          break;
+        case 'cliente':
+          valA = (a.cliente || '').toLowerCase();
+          valB = (b.cliente || '').toLowerCase();
+          break;
+        case 'numero_transporte':
+          valA = parseFloat(a.numero_transporte) || a.numero_transporte || 0;
+          valB = parseFloat(b.numero_transporte) || b.numero_transporte || 0;
+          break;
+        case 'cantidad_pallet':
+          valA = a.cantidad_pallet || 0;
+          valB = b.cantidad_pallet || 0;
+          break;
+        case 'fase_global':
+          valA = a.fase_global || '';
+          valB = b.fase_global || '';
+          break;
+        case 'cajas':
+          valA = a.total_cajas_preparadas || a.total_cajas_pedido || 0;
+          valB = b.total_cajas_preparadas || b.total_cajas_pedido || 0;
+          break;
+        case 'diferencias':
+          valA = a.skus_con_diferencia || 0;
+          valB = b.skus_con_diferencia || 0;
+          break;
+      }
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return sortDirection === 'desc' 
+          ? valB.localeCompare(valA)
+          : valA.localeCompare(valB);
+      }
+
+      return sortDirection === 'desc' 
+        ? (valB > valA ? 1 : valB < valA ? -1 : 0) 
+        : (valA > valB ? 1 : valA < valB ? -1 : 0);
+    });
+  }, [filteredTransports, sortField, sortDirection]);
+
+  const renderSortIcon = (field: SummarySortField) => {
+    if (sortField === field) {
+      return sortDirection === 'desc' ? (
+        <span className="inline-flex items-center text-[#0a5c36] font-black text-xs" title="Ordenado: Mayor a menor">
+          <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
+        </span>
+      ) : (
+        <span className="inline-flex items-center text-[#0a5c36] font-black text-xs" title="Ordenado: Menor a mayor">
+          <ChevronUp className="w-3.5 h-3.5 stroke-[2.5]" />
+        </span>
+      );
+    }
+    return <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-600 transition-colors" />;
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm mb-8 overflow-hidden">
@@ -181,40 +271,42 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
             );
           })}
 
-          {/* Botón para añadir una nueva semana */}
-          {showAddWeekInput ? (
-            <form onSubmit={handleCreateWeek} className="inline-flex items-center space-x-1 shrink-0">
-              <input
-                type="text"
-                autoFocus
-                placeholder="Ej. Semana 38"
-                value={newWeekName}
-                onChange={(e) => setNewWeekName(e.target.value)}
-                className="bg-white border border-[#0a5c36] text-xs rounded-xl px-2.5 py-1.5 text-slate-800 focus:outline-none w-28 shadow-xs"
-              />
+          {/* Botón para añadir una nueva semana (solo usuarios autenticados) */}
+          {!isReadOnly && (
+            showAddWeekInput ? (
+              <form onSubmit={handleCreateWeek} className="inline-flex items-center space-x-1 shrink-0">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Ej. Semana 38"
+                  value={newWeekName}
+                  onChange={(e) => setNewWeekName(e.target.value)}
+                  className="bg-white border border-[#0a5c36] text-xs rounded-xl px-2.5 py-1.5 text-slate-800 focus:outline-none w-28 shadow-xs"
+                />
+                <button
+                  type="submit"
+                  className="px-2 py-1.5 bg-[#0a5c36] text-white rounded-xl text-xs font-bold hover:bg-[#08482a]"
+                >
+                  OK
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddWeekInput(false)}
+                  className="px-2 py-1.5 bg-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-300"
+                >
+                  ✕
+                </button>
+              </form>
+            ) : (
               <button
-                type="submit"
-                className="px-2 py-1.5 bg-[#0a5c36] text-white rounded-xl text-xs font-bold hover:bg-[#08482a]"
+                onClick={() => setShowAddWeekInput(true)}
+                className="px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0a5c36] hover:bg-emerald-50 border border-dashed border-slate-300 transition-all flex items-center space-x-1 shrink-0 cursor-pointer"
+                title="Añadir una nueva semana de despacho"
               >
-                OK
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nueva Semana</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setShowAddWeekInput(false)}
-                className="px-2 py-1.5 bg-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-300"
-              >
-                ✕
-              </button>
-            </form>
-          ) : (
-            <button
-              onClick={() => setShowAddWeekInput(true)}
-              className="px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0a5c36] hover:bg-emerald-50 border border-dashed border-slate-300 transition-all flex items-center space-x-1 shrink-0 cursor-pointer"
-              title="Añadir una nueva semana de despacho"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Nueva Semana</span>
-            </button>
+            )
           )}
         </div>
       </div>
@@ -306,7 +398,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
 
       {/* 3. Tabla de Despachos */}
       <div className="overflow-x-auto p-4">
-        {filteredTransports.length === 0 ? (
+        {sortedTransports.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
             <Truck className="w-12 h-12 mx-auto text-slate-300 mb-3" />
             <p className="font-semibold text-slate-700">
@@ -319,19 +411,82 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
         ) : (
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px] bg-slate-50">
-                <th className="py-3 px-3">Semana</th>
-                <th className="py-3 px-3">Cliente</th>
-                <th className="py-3 px-3">N° Transporte</th>
-                <th className="py-3 px-3 text-center">Cant. Pallets</th>
-                <th className="py-3 px-3">Fase Global</th>
-                <th className="py-3 px-3 text-center">Cajas (Prep/Ped)</th>
-                <th className="py-3 px-3 text-center">Diferencias</th>
+              <tr className="border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px] bg-slate-50 select-none">
+                <th 
+                  className="py-3 px-3 cursor-pointer hover:bg-slate-100/80 transition-colors group"
+                  onClick={() => handleSort('semana')}
+                  title="Ordenar por Semana (Mayor a menor / Menor a mayor)"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Semana</span>
+                    {renderSortIcon('semana')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-3 cursor-pointer hover:bg-slate-100/80 transition-colors group"
+                  onClick={() => handleSort('cliente')}
+                  title="Ordenar por Cliente (A-Z / Z-A)"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Cliente</span>
+                    {renderSortIcon('cliente')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-3 cursor-pointer hover:bg-slate-100/80 transition-colors group"
+                  onClick={() => handleSort('numero_transporte')}
+                  title="Ordenar por N° Transporte (Mayor a menor / Menor a mayor)"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>N° Transporte</span>
+                    {renderSortIcon('numero_transporte')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-3 text-center cursor-pointer hover:bg-slate-100/80 transition-colors group"
+                  onClick={() => handleSort('cantidad_pallet')}
+                  title="Ordenar por Cantidad de Pallets (Mayor a menor / Menor a mayor)"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>Cant. Pallets</span>
+                    {renderSortIcon('cantidad_pallet')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-3 cursor-pointer hover:bg-slate-100/80 transition-colors group"
+                  onClick={() => handleSort('fase_global')}
+                  title="Ordenar por Fase Global"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Fase Global</span>
+                    {renderSortIcon('fase_global')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-3 text-center cursor-pointer hover:bg-slate-100/80 transition-colors group"
+                  onClick={() => handleSort('cajas')}
+                  title="Ordenar por Cajas Preparadas / Pedidas (Mayor a menor / Menor a mayor)"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>Cajas (Prep/Ped)</span>
+                    {renderSortIcon('cajas')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3 px-3 text-center cursor-pointer hover:bg-slate-100/80 transition-colors group"
+                  onClick={() => handleSort('diferencias')}
+                  title="Ordenar por Diferencias de SKUs (Mayor a menor / Menor a mayor)"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>Diferencias</span>
+                    {renderSortIcon('diferencias')}
+                  </div>
+                </th>
                 <th className="py-3 px-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredTransports.map((t) => {
+              {sortedTransports.map((t) => {
                 const isSelected = t.id === selectedTransportId;
                 const hasDifferences = t.skus_con_diferencia > 0;
 
@@ -347,16 +502,22 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                   >
                     {/* 1. Selector / Editor de Semana en fila */}
                     <td className="py-3.5 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={t.semana}
-                        onChange={(e) => onUpdateSummary(t.id, { semana: e.target.value })}
-                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 text-xs font-bold focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
-                        title="Cambiar la semana de este transporte"
-                      >
-                        {allSemanas.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                      {isReadOnly ? (
+                        <span className="inline-block px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold shadow-2xs">
+                          {t.semana}
+                        </span>
+                      ) : (
+                        <select
+                          value={t.semana}
+                          onChange={(e) => onUpdateSummary(t.id, { semana: e.target.value })}
+                          className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 text-xs font-bold focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
+                          title="Cambiar la semana de este transporte"
+                        >
+                          {allSemanas.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
 
                     {/* 2. Cliente */}
@@ -371,34 +532,51 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                       </span>
                     </td>
 
-                    {/* 4. Cantidad Pallet (Editable) */}
+                    {/* 4. Cantidad Pallet (Editable o Solo Lectura) */}
                     <td className="py-3.5 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <div className="inline-flex items-center space-x-1">
-                        <input
-                          type="number"
-                          min="0"
-                          max="99"
-                          value={t.cantidad_pallet}
-                          onChange={(e) => onUpdateSummary(t.id, { cantidad_pallet: parseInt(e.target.value) || 0 })}
-                          className="w-14 text-center bg-amber-50 border border-amber-300 text-amber-900 font-black rounded px-1.5 py-1 text-xs focus:border-amber-500 focus:outline-none shadow-xs"
-                        />
-                        <span className="text-[10px] text-slate-500 font-bold">PLT</span>
-                      </div>
+                      {isReadOnly ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-900 font-bold text-xs">
+                          {t.cantidad_pallet} <span className="text-[10px] text-amber-700 ml-1 font-semibold">PLT</span>
+                        </span>
+                      ) : (
+                        <div className="inline-flex items-center space-x-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={t.cantidad_pallet}
+                            onChange={(e) => onUpdateSummary(t.id, { cantidad_pallet: parseInt(e.target.value) || 0 })}
+                            className="w-14 text-center bg-amber-50 border border-amber-300 text-amber-900 font-black rounded px-1.5 py-1 text-xs focus:border-amber-500 focus:outline-none shadow-xs"
+                          />
+                          <span className="text-[10px] text-slate-500 font-bold">PLT</span>
+                        </div>
+                      )}
                     </td>
 
                     {/* 5. Fase Global (Pipeline) */}
                     <td className="py-3.5 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={t.fase_global}
-                        onChange={(e) => onUpdateSummary(t.id, { fase_global: e.target.value })}
-                        className="bg-white border border-slate-200 text-xs rounded-lg px-2 py-1 text-slate-800 font-bold focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
-                      >
-                        {FASE_GLOBAL_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                      {isReadOnly ? (
+                        (() => {
+                          const opt = FASE_GLOBAL_OPTIONS.find(o => o.value === t.fase_global) || { label: t.fase_global, bg: "bg-slate-100 text-slate-700 border-slate-200" };
+                          return (
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border shadow-2xs ${opt.bg}`}>
+                              {opt.label}
+                            </span>
+                          );
+                        })()
+                      ) : (
+                        <select
+                          value={t.fase_global}
+                          onChange={(e) => onUpdateSummary(t.id, { fase_global: e.target.value })}
+                          className="bg-white border border-slate-200 text-xs rounded-lg px-2 py-1 text-slate-800 font-bold focus:border-[#0a5c36] focus:outline-none cursor-pointer shadow-xs"
+                        >
+                          {FASE_GLOBAL_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
 
                     {/* 8. Cajas (Prep / Ped) */}
@@ -426,7 +604,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                     <td className="py-3.5 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end space-x-1.5">
                         
-                        {/* Botón Excel */}
+                        {/* Botón Excel (Siempre habilitado para todos los usuarios) */}
                         <button
                           onClick={() => onExportExcel(t.id)}
                           title="Descargar Excel de este transporte"
@@ -438,7 +616,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                         {/* Botón Ver Detalle */}
                         <button
                           onClick={() => onSelectTransport(t.id)}
-                          title="Ver y editar detalle de preparación por SKU"
+                          title="Ver detalle de preparación por SKU"
                           className={`p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs ${
                             isSelected 
                               ? 'bg-[#0a5c36] text-white border-[#08482a] font-bold' 
@@ -448,14 +626,16 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Botón Eliminar */}
-                        <button
-                          onClick={() => onDeleteTransport(t.id)}
-                          title="Eliminar transporte"
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 transition-all cursor-pointer shadow-xs"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Botón Eliminar (Solo para usuarios autenticados) */}
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => onDeleteTransport(t.id)}
+                            title="Eliminar transporte"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 transition-all cursor-pointer shadow-xs"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
 
                       </div>
                     </td>
